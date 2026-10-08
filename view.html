@@ -72,8 +72,12 @@
   .speed-countdown { font-size:54px; font-weight:900; color:#ffd34d; margin-top:18px; }
   .speed-countdown.speed-countdown-warn { color:#ff6b6b; }
 
+  .chosung-prompt { font-size:52px; font-weight:900; margin:18px 0; word-break:keep-all; }
+  .chosung-stopwatch { font-size:60px; font-weight:900; color:#ffd34d; margin-top:10px; }
+  .chosung-time { font-size:50px; font-weight:900; color:#ffd34d; margin-top:12px; }
+
   .image-round { font-size:13px; font-weight:700; color:rgba(255,255,255,0.75); margin-bottom:12px; letter-spacing:1px; }
-  .image-box { max-width:90vw; max-height:48vh; border-radius:16px; box-shadow:0 12px 30px rgba(0,0,0,0.25); }
+  .image-box { max-width:92vw; max-height:60vh; border-radius:16px; box-shadow:0 12px 30px rgba(0,0,0,0.25); }
   .image-winner { margin-top:16px; font-size:18px; font-weight:800; background:rgba(255,211,77,0.9); color:#5c4400; padding:8px 18px; border-radius:20px; }
 
   .final-title { font-size:22px; font-weight:800; margin-bottom:18px; }
@@ -87,7 +91,7 @@
 <div id="app">
   <div class="logo-wrap">
     <div class="logo-title">서대문🌱떡잎마을🏡방범대🛡️</div>
-    <div class="logo-sub">한강 플로깅 &amp; 피크닉 레크레이션 ing..</div>
+    <div class="logo-sub">한강 플로깅 &amp; 피크닉 레크레이션</div>
     <div class="spinner"></div>
   </div>
 </div>
@@ -105,12 +109,12 @@
     6: { title:'우리 조원 이름 맞히기', desc:'조에서 직접 뽑은 대표가 조원 이름을 전부 맞히면 성공' },
     7: { title:'즉석 OX 퀴즈 서바이벌', desc:'문제를 틀리면 즉시탈락! 마지막까지 살아남은 사람이 속한 조가 승리' },
     8: { title:'절대음감', desc:'조에서 5명씩 선발 / 가장 빠르게 절대음감 성공한 팀이 승리(최대시간 90초)' },
-    9: { title:'스피드퀴즈', desc:'조당 제시어 4개를 가장 빠르게 맞춘 조가 승리' },
+    9: { title:'스피드퀴즈', desc:'조당 제시어 4개를 60초 안에 성공하면 빙고!' },
     10:{ title:'3·2쿵쿵따', desc:'조 대표 1명씩 나와서 대전 시작 단어 첫글자는 "떡잎마을방범대"' },
-    11:{ title:'이미지게임 1라운드', desc:'제시어에 가장 잘 맞는 사람을 조별로 추천, 운영진이 1팀 선정' },
-    12:{ title:'이미지게임 2라운드', desc:'제시어에 가장 잘 맞는 사람을 조별로 추천, 운영진이 1팀 선정' },
-    13:{ title:'이미지게임 3라운드', desc:'제시어에 가장 잘 맞는 사람을 조별로 추천, 운영진이 1팀 선정' },
-    14:{ title:'이미지게임 4라운드', desc:'제시어에 가장 잘 맞는 사람을 조별로 추천, 운영진이 1팀 선정' },
+    11:{ title:'초성퀴즈', desc:'초성에 맞는 단어를 조원이 돌아가며 서로 다르게 말해요. 가장 빠른 2개 조가 빙고!' },
+    12:{ title:'문장퀴즈', desc:'질문에 맞는 답을 조원이 돌아가며 서로 다르게 말해요. 가장 빠른 2개 조가 빙고!' },
+    13:{ title:'이미지게임 1라운드', desc:'사진 5장을 순서대로 맞히면 빙고! 하나라도 틀리면 탈락' },
+    14:{ title:'이미지게임 2라운드', desc:'사진 5장을 순서대로 맞히면 빙고! 하나라도 틀리면 탈락' },
     15:{ title:'이미지게임 5라운드', desc:'제시어에 가장 잘 맞는 사람을 조별로 추천, 운영진이 1팀 선정' },
     16:{ title:'이미지게임 6라운드', desc:'제시어에 가장 잘 맞는 사람을 조별로 추천, 운영진이 1팀 선정' }
   };
@@ -163,7 +167,6 @@
 
   function playTick() { tone(620, 0.08, 'square', 0.12); }
   function playBoing() {
-    // "띠용" 느낌: 짧게 음이 쭉 올라갔다 내려오는 소리
     if (!soundEnabled || !audioCtx) return;
     try {
       const osc = audioCtx.createOscillator();
@@ -212,7 +215,7 @@
     const gateHtml = soundEnabled ? '' : `<button class="sound-gate-btn" onclick="enableSound()">🔊 소리 켜고 시작하기</button>`;
     app.innerHTML = `
       <div class="logo-wrap">
-        <div class="logo-title">🏕️ 서대문 떡잎마을 방범대</div>
+        <div class="logo-title">서대문🌱떡잎마을🏡방범대🛡️</div>
         <div class="logo-sub">한강 플로깅 &amp; 피크닉 레크레이션</div>
         <div class="spinner"></div>
         ${gateHtml}
@@ -228,7 +231,6 @@
   }
 
   function bingoLayoutFor(team) {
-    // team.layout이 있으면 그 순서대로, 없으면 1~16 그대로
     if (team && Array.isArray(team.layout) && team.layout.length === 16) return team.layout;
     const def = []; for (let i = 1; i <= 16; i++) def.push(i);
     return def;
@@ -293,7 +295,6 @@
       }
       paint(shuffleArray(base), false);
       playTick();
-      // 점점 느려지게: 간격을 다시 예약
       const nextDelay = 60 + Math.pow(tick / totalTicks, 2) * 300;
       shuffleTimer = setTimeout(step, nextDelay);
     }
@@ -307,7 +308,6 @@
   let oxWasEliminatedAtQuestionStart = null;
   let oxWasEliminatedQid = null;
 
-  // 대기 화면에서도 조별로 누가 남았는지 실시간으로 보여주기 위한 구독
   let oxIdleRosterRef1 = null;
   let oxIdleRosterRef2 = null;
   function attachOxIdleRoster(roundId) {
@@ -402,7 +402,7 @@
     if (payload.mode === 'idle' || !payload.mode) {
       app.innerHTML = `
         <div class="mission-badge">OX 퀴즈 서바이벌</div>
-        <div class="mission-title">문제 틀리면 즉시 탈락입니다!</div>
+        <div class="mission-title">문제를 틀리면 즉시 탈락!</div>
         <div class="mission-desc">문제가 뜨면 10초 안에 O 또는 X를 선택하세요.<br>10초 안이면 몇 번이든 바꿀 수 있어요.<br>마지막까지 살아남은 사람이 속한 조가 승리해요!</div>
         <div class="ox-roster-wrap" id="ox-idle-roster"></div>`;
       attachOxIdleRoster(payload.roundId);
@@ -432,7 +432,6 @@
           <button class="ox-vote-btn o" id="ox-btn-o" onclick="submitOxVote('O')">O</button>
           <button class="ox-vote-btn x" id="ox-btn-x" onclick="submitOxVote('X')">X</button>
         </div>`;
-      // 내 현재 선택 표시
       db.ref('oxRounds/' + payload.roundId + '/q/' + payload.qid + '/votes/' + clientId).once('value').then(snap => {
         const v = snap.val();
         if (v && v.choice) {
@@ -463,13 +462,11 @@
     if (payload.mode === 'revealed') {
       db.ref('oxRounds/' + payload.roundId + '/eliminated/' + clientId).once('value').then(snap => {
         const nowOut = snap.exists();
-        // 이 문제가 시작될 때(투표 전) 내 상태를 기억해뒀다가 비교해야 "방금 탈락한 건지 / 방금 부활한 건지"를
-        // 정확히 판정할 수 있음. 같은 문제(qid)에 대해 기록이 없으면(예: 결과 화면에 막 들어온 경우) 현재 상태로 대체.
         const wasOut = (oxWasEliminatedQid === payload.qid) ? oxWasEliminatedAtQuestionStart : nowOut;
         let badge;
         if (payload.revival) {
           if (!wasOut) {
-            badge = `<div class="ox-result-badge" style="background:rgba(255,255,255,0.25); color:#fff;">👏부활에 성공한 조원에게 박수!👏 </div>`;
+            badge = `<div class="ox-result-badge" style="background:rgba(255,255,255,0.25); color:#fff;">👀 패자부활전 구경 중</div>`;
           } else if (!nowOut) {
             badge = `<div class="ox-result-badge survive">🎉부활 성공!🎉</div>`;
             playDing();
@@ -479,7 +476,7 @@
           }
         } else {
           if (wasOut) {
-            badge = `<div class="ox-result-badge out">계속 함께 해주세요!</div>`;
+            badge = `<div class="ox-result-badge out">계속 구경 모드</div>`;
           } else if (nowOut) {
             badge = `<div class="ox-result-badge out">😭탈락!😭 마지막까지 함께 해주세요!!</div>`;
             playBuzz();
@@ -526,12 +523,12 @@
     const words = payload.words || [];
     const total = payload.total || words.length || 4;
     const idx = payload.currentIndex || 0;
-    const result = payload.result; // 'success' | 'fail' | null
+    const result = payload.result;
 
     if (result === 'success') {
       app.innerHTML = `
         <div class="speed-team">${esc(team.name || '')}</div>
-        <div class="speed-big">🎉 성공!</div>
+        <div class="speed-big">🎉성공!🎉</div>
         <div class="ox-result-badge survive">60초 안에 다 맞혔어요 — 빙고 획득!</div>`;
       playDing();
       return;
@@ -539,7 +536,7 @@
     if (result === 'fail') {
       app.innerHTML = `
         <div class="speed-team">${esc(team.name || '')}</div>
-        <div class="speed-big">⏰ 시간 종료!</div>
+        <div class="speed-big">⏰시간 종료!⏰</div>
         <div class="ox-result-badge out">아쉽지만 60초를 넘겼어요</div>`;
       playBuzz();
       return;
@@ -568,15 +565,89 @@
     speedCountdownTimer = setInterval(tickLoop, 200);
   }
 
-  function renderImageGame(payload) {
-    let winnerHtml = '';
-    if (payload.winnerTeamName) {
-      winnerHtml = `<div class="image-winner">🏆 ${esc(payload.winnerTeamName)} 조 선정!</div>`;
+  // ---------- 초성·문장퀴즈 (미션 11, 12) ----------
+  let chosungStopwatchTimer = null;
+  function renderChosung(payload, teams) {
+    if (chosungStopwatchTimer) { clearInterval(chosungStopwatchTimer); chosungStopwatchTimer = null; }
+    if (payload.mode === 'idle' || !payload.mode) {
+      app.innerHTML = `
+        <div class="mission-badge">초성·문장퀴즈</div>
+        <div class="mission-title">조원이 돌아가며 정답을 얘기해요!</div>
+        <div class="mission-desc">모두가 정답을 말할 때까지 걸린 시간을 재고<br>가장 빠른 2개 조가 빙고를 받아요!</div>`;
+      return;
+    }
+    const team = (teams && teams[payload.teamId]) || {};
+    const roundLabel = payload.round === 12 ? '12번 · 문장퀴즈' : '11번 · 초성퀴즈';
+    if (payload.mode === 'stopped') {
+      app.innerHTML = `
+        <div class="mission-badge">${roundLabel}</div>
+        <div class="speed-team">${esc(team.name || '')}</div>
+        <div class="mission-title">⏱기록 완료!⏱</div>
+        <div class="chosung-time">${((payload.elapsed || 0) / 1000).toFixed(1)}초</div>`;
+      playDing();
+      return;
     }
     app.innerHTML = `
-      <div class="image-round">이미지게임 ${esc(payload.round || '')}라운드</div>
-      ${payload.imageData ? `<img class="image-box" src="${payload.imageData}">` : ''}
-      ${winnerHtml}`;
+      <div class="mission-badge">${roundLabel}</div>
+      <div class="speed-team">${esc(team.name || '')}</div>
+      <div class="chosung-prompt">${esc(payload.prompt || '')}</div>
+      <div class="chosung-stopwatch" id="chosung-stopwatch">0.0</div>`;
+    const startTime = payload.startTime || Date.now();
+    const tick = () => {
+      const el = document.getElementById('chosung-stopwatch');
+      if (el) el.textContent = ((Date.now() - startTime) / 1000).toFixed(1);
+    };
+    tick();
+    chosungStopwatchTimer = setInterval(tick, 100);
+  }
+
+  function renderChosungResults(payload) {
+    const medal = (i) => i === 0 ? '🥇' : i === 1 ? '🥈' : (i + 1) + '위';
+    const buildList = (arr) => (arr || []).map((r, i) => `
+      <div class="final-row ${i < 2 ? 'rank1' : ''}">
+        <span><span class="final-rank">${medal(i)}</span>${esc(r.name)}</span>
+        <span>${(r.elapsed / 1000).toFixed(1)}초</span>
+      </div>`).join('');
+    app.innerHTML = `
+      <div class="final-title">🏆 초성·문장퀴즈 결과</div>
+      <div class="sub-heading" style="margin-top:10px;">11번 · 초성퀴즈</div>
+      <div class="final-list">${buildList(payload.r11) || '<span style="opacity:0.7;">기록 없음</span>'}</div>
+      <div class="sub-heading" style="margin-top:18px;">12번 · 문장퀴즈</div>
+      <div class="final-list">${buildList(payload.r12) || '<span style="opacity:0.7;">기록 없음</span>'}</div>`;
+  }
+
+  // ---------- 이미지게임 (미션 13, 14) ----------
+  function renderImageRound2(payload, teams) {
+    if (payload.mode === 'idle' || !payload.teamId) {
+      app.innerHTML = `
+        <div class="mission-badge">이미지게임</div>
+        <div class="mission-title">사진을보고 정답을 맞춰보세요!</div>
+        <div class="mission-desc">조원마다 주어진 사진의 정답을 맞춰요!<br>모든 조원이 맞히면 빙고 획득!<br>한명이라도 틀리면 탈락!</div>`;
+      return;
+    }
+    const team = (teams && teams[payload.teamId]) || {};
+    const total = payload.total || 1;
+    const idx = payload.currentIndex || 0;
+    const status = payload.status;
+    if (status === 'success') {
+      app.innerHTML = `
+        <div class="image-round">${esc(team.name || '')}</div>
+        <div class="mission-title">🎉성공!🎉</div>
+        <div class="ox-result-badge survive">빙고를 획득 했습니다!</div>`;
+      playDing();
+      return;
+    }
+    if (status === 'fail') {
+      app.innerHTML = `
+        <div class="image-round">${esc(team.name || '')}</div>
+        <div class="mission-title">😭탈락!😭</div>
+        <div class="ox-result-badge out">이번 라운드는 여기서 종료!</div>`;
+      playBuzz();
+      return;
+    }
+    app.innerHTML = `
+      <div class="image-round">${esc(team.name || '')} · ${idx + 1} / ${total}</div>
+      ${payload.imageData ? `<img class="image-box" src="${payload.imageData}">` : ''}`;
   }
 
   function renderFinal(payload) {
@@ -587,7 +658,7 @@
         <span>${esc(r.score)}칸</span>
       </div>`).join('');
     app.innerHTML = `
-      <div class="final-title">🏆최종 결과🏆</div>
+      <div class="final-title">🏆 최종 결과 🏆</div>
       <div class="final-list">${rows}</div>`;
   }
 
@@ -597,7 +668,7 @@
     if (screen !== 'bingoShuffle' && shuffleTimer) { clearTimeout(shuffleTimer); clearInterval(shuffleTimer); shuffleTimer = null; }
     if (screen !== 'oxquiz' && oxCountdownTimer) { clearInterval(oxCountdownTimer); oxCountdownTimer = null; }
     if (screen !== 'speedquiz' && speedCountdownTimer) { clearInterval(speedCountdownTimer); speedCountdownTimer = null; }
-    // 대기 화면이 아닌 다른 화면으로 넘어가면 구독 해제(화면이 idle일 때만 attachOxIdleRoster가 다시 붙여줌)
+    if (screen !== 'chosung' && chosungStopwatchTimer) { clearInterval(chosungStopwatchTimer); chosungStopwatchTimer = null; }
     if (!(screen === 'oxquiz' && payload.mode === 'idle')) detachOxIdleRoster();
     if (screen === 'waiting') renderWaiting();
     else if (screen === 'missionIntro') renderMissionIntro(payload);
@@ -605,7 +676,9 @@
     else if (screen === 'bingoShuffle') renderBingoShuffle(payload, teams);
     else if (screen === 'oxquiz') renderOxQuiz(payload, teams);
     else if (screen === 'speedquiz') renderSpeedQuiz(payload, teams);
-    else if (screen === 'imagegame') renderImageGame(payload);
+    else if (screen === 'chosung') renderChosung(payload, teams);
+    else if (screen === 'chosungResults') renderChosungResults(payload);
+    else if (screen === 'imageround2') renderImageRound2(payload, teams);
     else if (screen === 'final') renderFinal(payload);
     else renderWaiting();
   }
