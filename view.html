@@ -68,6 +68,9 @@
   .speed-team { font-size:14px; font-weight:700; color:rgba(255,255,255,0.75); margin-bottom:8px; }
   .speed-big { font-size:40px; font-weight:900; margin:14px 0; }
   .speed-idx { font-size:13px; color:rgba(255,255,255,0.6); }
+  .speed-word { font-size:46px; font-weight:900; margin:16px 0; word-break:keep-all; }
+  .speed-countdown { font-size:54px; font-weight:900; color:#ffd34d; margin-top:18px; }
+  .speed-countdown.speed-countdown-warn { color:#ff6b6b; }
 
   .image-round { font-size:13px; font-weight:700; color:rgba(255,255,255,0.75); margin-bottom:12px; letter-spacing:1px; }
   .image-box { max-width:90vw; max-height:48vh; border-radius:16px; box-shadow:0 12px 30px rgba(0,0,0,0.25); }
@@ -506,23 +509,62 @@
     if (btn) btn.classList.add('selected');
   }
 
-  // ---------- 스피드퀴즈 (제시어는 운영자 화면에만 보임) ----------
+  // ---------- 스피드퀴즈 (제시어가 다같이 보는 화면에 그대로 보여요) ----------
   function renderSpeedQuiz(payload, teams) {
+    if (speedCountdownTimer) { clearInterval(speedCountdownTimer); speedCountdownTimer = null; }
+
     if (payload.mode === 'idle' || !payload.teamId) {
       app.innerHTML = `
         <div class="mission-badge">스피드퀴즈</div>
-        <div class="mission-title">앞에 보이는 제시어를 어떤 방식으로든<br>표현 해주세요!</div>
-        <div class="mission-desc">60초 내에 제시어 4개를 맞추면 통과입니다!</div>`;
+        <div class="mission-title">조 대표가 설명하면 조원이 맞혀요!</div>
+        <div class="mission-desc">대표는 제시어를 직접 말할 수 없고, 설명만 할 수 있어요.<br>60초 안에 제시어 4개를 다 맞히면 그 조는 빙고 획득!<br>지금 나와있는 조가 아니어도, 어떤 제시어였는지 다같이 구경해요 👀</div>`;
       return;
     }
+
     const team = (teams && teams[payload.teamId]) || {};
-    const total = payload.total || 4;
+    const words = payload.words || [];
+    const total = payload.total || words.length || 4;
     const idx = payload.currentIndex || 0;
-    const done = idx >= total;
+    const result = payload.result; // 'success' | 'fail' | null
+
+    if (result === 'success') {
+      app.innerHTML = `
+        <div class="speed-team">${esc(team.name || '')}</div>
+        <div class="speed-big">🎉 성공!</div>
+        <div class="ox-result-badge survive">60초 안에 다 맞혔어요 — 빙고 획득!</div>`;
+      playDing();
+      return;
+    }
+    if (result === 'fail') {
+      app.innerHTML = `
+        <div class="speed-team">${esc(team.name || '')}</div>
+        <div class="speed-big">⏰ 시간 종료!</div>
+        <div class="ox-result-badge out">아쉽지만 60초를 넘겼어요</div>`;
+      playBuzz();
+      return;
+    }
+
+    const currentWord = words[idx] || '';
     app.innerHTML = `
       <div class="speed-team">${esc(team.name || '')} 스피드퀴즈 진행중</div>
-      <div class="speed-big">${done ? '🎉 완료!' : (idx + 1) + '번째 제시어 진행중'}</div>
-      <div class="speed-idx">${Math.min(idx + (done ? 0 : 1), total)} / ${total}</div>`;
+      <div class="speed-word">${esc(currentWord)}</div>
+      <div class="speed-idx">${Math.min(idx + 1, total)} / ${total}</div>
+      <div class="speed-countdown" id="speed-countdown">60</div>`;
+
+    const tickLoop = () => {
+      const remain = Math.max(0, (payload.deadline || 0) - Date.now());
+      const sec = Math.ceil(remain / 1000);
+      const el = document.getElementById('speed-countdown');
+      if (el) {
+        el.textContent = sec;
+        el.classList.toggle('speed-countdown-warn', sec <= 10);
+      }
+      if (remain <= 0) {
+        clearInterval(speedCountdownTimer); speedCountdownTimer = null;
+      }
+    };
+    tickLoop();
+    speedCountdownTimer = setInterval(tickLoop, 200);
   }
 
   function renderImageGame(payload) {
@@ -553,6 +595,7 @@
     const payload = (game && game.payload) || {};
     if (screen !== 'bingoShuffle' && shuffleTimer) { clearTimeout(shuffleTimer); clearInterval(shuffleTimer); shuffleTimer = null; }
     if (screen !== 'oxquiz' && oxCountdownTimer) { clearInterval(oxCountdownTimer); oxCountdownTimer = null; }
+    if (screen !== 'speedquiz' && speedCountdownTimer) { clearInterval(speedCountdownTimer); speedCountdownTimer = null; }
     // 대기 화면이 아닌 다른 화면으로 넘어가면 구독 해제(화면이 idle일 때만 attachOxIdleRoster가 다시 붙여줌)
     if (!(screen === 'oxquiz' && payload.mode === 'idle')) detachOxIdleRoster();
     if (screen === 'waiting') renderWaiting();
