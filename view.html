@@ -438,7 +438,7 @@
       if (eliminated) {
         app.innerHTML = `
           <div class="ox-question">${esc(payload.question || '')}</div>
-          <div class="ox-spectator">😢 이미 탈락했어요 — 구경 모드</div>`;
+          <div class="ox-spectator">😢 탈락했어요! 살아남은 조원을 도와주세요! </div>`;
         return;
       }
       app.innerHTML = `
@@ -480,7 +480,7 @@
       db.ref('oxRounds/' + payload.roundId + '/eliminated/' + clientId).once('value').then(snap => {
         const nowOut = snap.exists();
         const badge = eliminated
-          ? `<div class="ox-result-badge out">계속 구경 모드</div>`
+          ? `<div class="ox-result-badge out">땡!! 아쉽지만 살아남은 조원과 함께 끝까지 진행 해봐요!</div>`
           : (nowOut ? `<div class="ox-result-badge out">😭 탈락!</div>` : `<div class="ox-result-badge survive">🎉 생존!</div>`);
         if (!eliminated && nowOut) playBuzz(); else if (!eliminated) playDing();
         app.innerHTML = `
