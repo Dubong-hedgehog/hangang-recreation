@@ -372,7 +372,10 @@
       const locked = !!t.layoutLocked;
       return `<div class="shuffle-team-row">
         <span class="shuffle-team-name">${esc(t.name || id)}</span>
-        <button class="btn-sm ${locked ? 'btn-outline' : 'btn'}" ${locked ? 'disabled' : ''} onclick="shuffleTeamBingo('${id}')">${locked ? '섞음 완료' : '🎲 번호 섞기'}</button>
+        <div class="row" style="gap:4px; width:auto;">
+          <button class="btn-sm ${locked ? 'btn-outline' : 'btn'}" ${locked ? 'disabled' : ''} onclick="shuffleTeamBingo('${id}')">${locked ? '섞음 완료' : '🎲 번호 섞기'}</button>
+          ${locked ? `<button class="btn-danger" onclick="resetTeamBingoLayout('${id}')">초기화</button>` : ''}
+        </div>
       </div>`;
     }).join('') || '<span class="hint">아직 조가 없어요</span>';
   }
@@ -387,6 +390,12 @@
     }
     setScreen('bingoShuffle', { teamId, finalLayout: arr });
     db.ref('teams/' + teamId).update({ layout: arr, layoutLocked: true });
+  }
+  function resetTeamBingoLayout(teamId) {
+    const t = teamsData[teamId];
+    if (!t) return;
+    if (!confirm((t.name || teamId) + '의 빙고판 번호 섞기를 초기화할까요? (테스트용) 다시 "번호 섞기"를 누를 수 있게 돼요. 실제 행사 중에는 조장이 1번만 섞어야 하니, 이 버튼은 테스트할 때만 쓰세요.')) return;
+    db.ref('teams/' + teamId).update({ layout: null, layoutLocked: null });
   }
 
   // ---------- 룰렛 ----------
