@@ -29,6 +29,7 @@
   .btn-outline { background:#fff; color:#0a7a56; border:1px solid #0a7a56; border-radius:8px; padding:9px 12px; font-size:13px; font-weight:700; white-space:nowrap; }
   .btn-sm { padding:6px 9px; font-size:12px; border-radius:7px; }
   .btn-danger { background:#fff; color:#d9534f; border:1px solid #f0c2c0; border-radius:8px; padding:6px 9px; font-size:12px; font-weight:700; }
+  .btn[disabled], .btn-outline[disabled] { opacity:0.45; cursor:default; }
   .chip { display:inline-flex; align-items:center; gap:6px; background:#eef5f1; border-radius:20px; padding:5px 6px 5px 12px; font-size:13px; font-weight:600; margin:3px 4px 0 0; }
   .chip button { background:none; border:none; color:#d9534f; font-size:14px; font-weight:800; width:20px; height:20px; border-radius:50%; }
 
@@ -54,6 +55,9 @@
 
   .hint { font-size:11px; color:#8a958f; margin-top:6px; line-height:1.5; }
   .img-preview { max-width:100%; max-height:160px; border-radius:10px; margin-top:8px; display:block; }
+  .shuffle-team-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .shuffle-team-row:last-child { margin-bottom:0; }
+  .shuffle-team-name { font-size:13px; font-weight:700; }
 </style>
 </head>
 <body>
@@ -89,6 +93,11 @@
     <button class="btn" onclick="showBingoBoard()">📋 다같이 보는 화면에 빙고판 띄우기</button>
   </div>
   <div class="card">
+    <div class="card-title">조별 빙고 번호 섞기 (조장 1회 찬스)</div>
+    <div id="bingo-shuffle-list"></div>
+    <div class="hint">조장에게 휴대폰을 건네고 직접 누르게 해주세요. 한 번 섞으면 그 조는 다시 섞을 수 없어요.</div>
+  </div>
+  <div class="card">
     <div class="card-title">미션별 완료 조 체크</div>
     <div id="mission-list"></div>
   </div>
@@ -98,11 +107,11 @@
 <div class="panel" id="panel-roulette">
   <div class="card">
     <div class="card-title">조별 대표 룰렛 추첨</div>
-    <select id="roulette-team-select"></select>
+    <select id="roulette-team-select" onchange="previewRouletteTeam()"></select>
     <div class="row" style="margin-top:10px;">
       <button class="btn" onclick="startRoulette()">🎯 추첨 시작</button>
     </div>
-    <div class="hint">뽑힌 사람은 다음 추첨부터 제외돼요. 조원 전원이 한 번씩 다 뽑히면 그 조만 자동으로 다시 전원 포함해서 뽑아요.</div>
+    <div class="hint">조를 선택하면 다같이 보는 화면에 그 조의 원판이 먼저 뜨고(정지 상태), 추첨 시작을 누르면 그때 돌아가요. 뽑힌 사람은 다음 추첨부터 제외돼요. 조원 전원이 한 번씩 다 뽑히면 그 조만 자동으로 다시 전원 포함해서 뽑아요.</div>
   </div>
   <div class="card" id="roulette-result-card" style="display:none;">
     <div class="card-title">최근 추첨 결과</div>
@@ -120,30 +129,51 @@
 
   <div class="subpanel active" id="sub-ox">
     <div class="card">
-      <div class="card-title">즉석 OX 퀴즈 (미션 7)</div>
-      <textarea id="ox-question" placeholder="문제를 입력하세요"></textarea>
-      <div class="row" style="margin-top:8px;">
-        <button class="btn" onclick="publishOxQuestion()">질문 공개</button>
+      <div class="card-title">즉석 OX 퀴즈 서바이벌 (미션 7)</div>
+      <div class="row">
+        <button class="btn" onclick="startNewOxRound()">🆕 새 서바이벌 시작</button>
+        <button class="btn-outline" onclick="goOxIdle()">대기 화면으로</button>
       </div>
-      <div class="row" style="margin-top:8px;">
-        <button class="btn-outline" onclick="revealOxAnswer('O')">정답 공개: ⭕</button>
-        <button class="btn-outline" onclick="revealOxAnswer('X')">정답 공개: ❌</button>
+      <div class="hint" id="ox-round-status">아직 서바이벌이 시작되지 않았어요. 먼저 "새 서바이벌 시작"을 눌러주세요.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">문제 은행 (최대 20개)</div>
+      <div class="row">
+        <input type="text" id="ox-bank-question" placeholder="문제 입력">
+        <select id="ox-bank-answer" style="max-width:68px; flex:none;">
+          <option value="O">O</option>
+          <option value="X">X</option>
+        </select>
+        <button class="btn-sm btn" onclick="addOxBankQuestion()">추가</button>
       </div>
-      <div class="hint">탈락 판정은 현장에서 직접 눈으로 보고 진행해주세요. 마지막까지 남은 사람이 속한 조를 아래서 완료 체크하면 돼요.</div>
+      <div id="ox-bank-list" style="margin-top:10px;"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">정답 공개 &amp; 탈락 처리</div>
+      <div class="row">
+        <button class="btn-outline" onclick="revealOxBankAnswer()">정답 공개하기</button>
+      </div>
+      <div class="hint">출제중인 문제의 정답을 공개하면서, 오답/무응답자를 자동으로 탈락 처리해요. (이미 탈락한 사람은 그대로 구경 모드 유지)</div>
+      <div id="ox-survivor-tally" style="margin-top:10px;"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">OX퀴즈 승리 조 빙고 체크</div>
       <div class="mission-actions">
         <div id="ox-bingo-checks"></div>
       </div>
+      <div class="hint">마지막까지 살아남은 사람이 속한 조를 체크해주세요.</div>
     </div>
   </div>
 
   <div class="subpanel" id="sub-speed">
     <div class="card">
       <div class="card-title">스피드퀴즈 (미션 9)</div>
-      <select id="speed-team-select"></select>
-      <input type="text" id="speed-word1" placeholder="제시어 1" style="margin-top:8px;">
-      <input type="text" id="speed-word2" placeholder="제시어 2" style="margin-top:6px;">
-      <input type="text" id="speed-word3" placeholder="제시어 3" style="margin-top:6px;">
-      <input type="text" id="speed-word4" placeholder="제시어 4" style="margin-top:6px;">
+      <select id="speed-team-select" onchange="loadSpeedWordsForTeam()"></select>
+      <input type="text" id="speed-word1" placeholder="제시어 1" style="margin-top:8px;" onchange="saveSpeedWords()">
+      <input type="text" id="speed-word2" placeholder="제시어 2" style="margin-top:6px;" onchange="saveSpeedWords()">
+      <input type="text" id="speed-word3" placeholder="제시어 3" style="margin-top:6px;" onchange="saveSpeedWords()">
+      <input type="text" id="speed-word4" placeholder="제시어 4" style="margin-top:6px;" onchange="saveSpeedWords()">
+      <div class="hint">제시어는 조를 바꿔도 자동으로 저장/불러와져요. 뷰어 화면에는 제시어가 절대 안 보이고, 운영자 화면에만 보여요.</div>
       <div class="row" style="margin-top:8px;">
         <button class="btn" onclick="startSpeedQuiz()">시작 (화면 송출)</button>
       </div>
@@ -200,7 +230,7 @@
     3:{title:'플로깅 코스 시간 내 완주하기'}, 4:{title:'제일 특이한/오래된 쓰레기 줍기'},
     5:{title:'"떡잎마을방범대" 글자 찾기'}, 6:{title:'우리 조원 이름 맞히기'},
     7:{title:'즉석 OX 퀴즈 서바이벌'}, 8:{title:'절대음감'},
-    9:{title:'스피드퀴즈'}, 10:{title:'쿵쿵따'},
+    9:{title:'스피드퀴즈'}, 10:{title:'3·2쿵쿵따'},
     11:{title:'이미지게임 1라운드'}, 12:{title:'이미지게임 2라운드'},
     13:{title:'이미지게임 3라운드'}, 14:{title:'이미지게임 4라운드'},
     15:{title:'이미지게임 5라운드'}, 16:{title:'이미지게임 6라운드'}
@@ -208,6 +238,7 @@
 
   let teamsData = {};
   let selectedImageBase64 = null;
+  let currentTab = 'teams';
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -226,8 +257,10 @@
 
   // ---------- 탭 전환 ----------
   function switchTab(key) {
+    currentTab = key;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === key));
     document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + key));
+    if (key === 'roulette') previewRouletteTeam();
   }
   function switchSubtab(key) {
     document.querySelectorAll('.subtab-btn').forEach(b => b.classList.toggle('active', b.dataset.sub === key));
@@ -322,17 +355,55 @@
       </div>`;
     }
     wrap.innerHTML = html;
+    // 게임 진행 탭의 미션별 체크도 같이 갱신
     const oxWrap = document.getElementById('ox-bingo-checks');
     if (oxWrap) oxWrap.innerHTML = '<div class="mission-check-wrap">' + missionBingoChecksHtml(7) + '</div>';
     const speedWrap = document.getElementById('speed-bingo-checks');
     if (speedWrap) speedWrap.innerHTML = '<div class="mission-check-wrap">' + missionBingoChecksHtml(9) + '</div>';
   }
 
+  // ---------- 빙고 번호 섞기 (조장 1회 찬스) ----------
+  function renderBingoShuffleList() {
+    const wrap = document.getElementById('bingo-shuffle-list');
+    if (!wrap) return;
+    const ids = Object.keys(teamsData).sort();
+    wrap.innerHTML = ids.map(id => {
+      const t = teamsData[id];
+      const locked = !!t.layoutLocked;
+      return `<div class="shuffle-team-row">
+        <span class="shuffle-team-name">${esc(t.name || id)}</span>
+        <button class="btn-sm ${locked ? 'btn-outline' : 'btn'}" ${locked ? 'disabled' : ''} onclick="shuffleTeamBingo('${id}')">${locked ? '섞음 완료' : '🎲 번호 섞기'}</button>
+      </div>`;
+    }).join('') || '<span class="hint">아직 조가 없어요</span>';
+  }
+  function shuffleTeamBingo(teamId) {
+    const t = teamsData[teamId];
+    if (!t || t.layoutLocked) return;
+    if (!confirm((t.name || teamId) + '의 빙고판을 섞을까요? 이 조는 다시는 섞을 수 없어요.')) return;
+    const arr = []; for (let i = 1; i <= 16; i++) arr.push(i);
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    setScreen('bingoShuffle', { teamId, finalLayout: arr });
+    db.ref('teams/' + teamId).update({ layout: arr, layoutLocked: true });
+  }
+
   // ---------- 룰렛 ----------
   function renderRouletteTeamSelect() {
     const sel = document.getElementById('roulette-team-select');
+    const prev = sel.value;
     const ids = Object.keys(teamsData).sort();
     sel.innerHTML = ids.map(id => `<option value="${id}">${esc(teamsData[id].name || id)}</option>`).join('');
+    if (ids.includes(prev)) sel.value = prev;
+  }
+  function previewRouletteTeam() {
+    const sel = document.getElementById('roulette-team-select');
+    const teamId = sel.value;
+    if (!teamId) return;
+    const t = teamsData[teamId] || {};
+    const pool = (t.pool && t.pool.length) ? t.pool : (t.members || []);
+    setScreen('roulette', { teamId, pool, phase:'idle' });
   }
   function startRoulette() {
     const teamId = document.getElementById('roulette-team-select').value;
@@ -346,33 +417,154 @@
 
     // 원판 룰렛 애니메이션에 필요한 pool/winnerIndex를 같이 보내요.
     // 당첨자는 이미 여기서 정해지고, view.html은 그 결과로 수렴하는 연출만 재생해요.
-    setScreen('roulette', { teamId, pool, winnerIndex: idx, resultName: winner, spinId: Date.now() });
+    // phase:'spinning'이 있어야 view.html이 실제로 돌리는 애니메이션을 재생해요.
+    setScreen('roulette', { teamId, pool, phase:'spinning', winnerIndex: idx, resultName: winner, spinId: Date.now() });
     db.ref('teams/' + teamId + '/pool').set(newPool);
     document.getElementById('roulette-result-card').style.display = 'block';
     document.getElementById('roulette-result-text').textContent = (t.name || teamId) + ' → ' + winner;
   }
 
   // ---------- OX퀴즈 ----------
-  function publishOxQuestion() {
-    const question = document.getElementById('ox-question').value.trim();
+  let oxBankData = {};
+  let currentOxRoundId = null;
+  let currentOxQid = null;
+
+  function addOxBankQuestion() {
+    const qInput = document.getElementById('ox-bank-question');
+    const question = qInput.value.trim();
+    const answer = document.getElementById('ox-bank-answer').value;
     if (!question) return alert('문제를 입력해주세요.');
-    setScreen('oxquiz', { question, revealed:false });
+    if (Object.keys(oxBankData).length >= 20) return alert('문제는 최대 20개까지 등록할 수 있어요.');
+    const id = 'q_' + Date.now();
+    db.ref('oxBank/' + id).set({ question, answer });
+    qInput.value = '';
   }
-  function revealOxAnswer(answer) {
-    db.ref('game/payload').update({ revealed:true, answer });
+  function deleteOxBankQuestion(id) {
+    if (!confirm('이 문제를 삭제할까요?')) return;
+    db.ref('oxBank/' + id).remove();
+  }
+  function renderOxBankList() {
+    const wrap = document.getElementById('ox-bank-list');
+    if (!wrap) return;
+    const ids = Object.keys(oxBankData).sort();
+    wrap.innerHTML = ids.map(id => {
+      const q = oxBankData[id];
+      const isLive = currentOxQid === id;
+      return `<div class="mission-row" style="padding:8px 0;">
+        <div style="font-size:13px; font-weight:600; margin-bottom:6px;">${esc(q.question)} <span class="hint">(정답: ${esc(q.answer)})</span></div>
+        <div class="row">
+          <button class="btn-sm ${isLive ? 'btn-outline' : 'btn'}" onclick="publishOxBankQuestion('${id}')">${isLive ? '출제중' : '출제'}</button>
+          <button class="btn-danger" onclick="deleteOxBankQuestion('${id}')">삭제</button>
+        </div>
+      </div>`;
+    }).join('') || '<span class="hint">아직 등록된 문제가 없어요</span>';
+  }
+
+  function startNewOxRound() {
+    const roundId = 'round_' + Date.now();
+    currentOxRoundId = roundId;
+    currentOxQid = null;
+    setScreen('oxquiz', { roundId, mode:'idle' });
+    document.getElementById('ox-round-status').textContent = '서바이벌 진행중이에요. 참가자들이 각자 폰으로 접속하면 자동으로 참가 폼이 떠요.';
+    renderOxBankList();
+    renderOxSurvivorTally(roundId);
+  }
+  function goOxIdle() {
+    if (!currentOxRoundId) return alert('먼저 "새 서바이벌 시작"을 눌러주세요.');
+    currentOxQid = null;
+    setScreen('oxquiz', { roundId: currentOxRoundId, mode:'idle' });
+    renderOxBankList();
+  }
+  function publishOxBankQuestion(bankId) {
+    if (!currentOxRoundId) return alert('먼저 "새 서바이벌 시작"을 눌러주세요.');
+    const q = oxBankData[bankId];
+    if (!q) return;
+    currentOxQid = bankId;
+    const deadline = Date.now() + 10000;
+    setScreen('oxquiz', { roundId: currentOxRoundId, mode:'question', qid: bankId, question: q.question, deadline, answer: null });
+    renderOxBankList();
+  }
+  function revealOxBankAnswer() {
+    if (!currentOxRoundId || !currentOxQid) return alert('먼저 문제를 출제해주세요.');
+    const correct = oxBankData[currentOxQid] && oxBankData[currentOxQid].answer;
+    db.ref('game/payload').update({ mode:'revealed', answer: correct });
+    computeOxElimination(currentOxRoundId, currentOxQid, correct);
+  }
+  function computeOxElimination(roundId, qid, correct) {
+    Promise.all([
+      db.ref('oxRounds/' + roundId + '/participants').once('value'),
+      db.ref('oxRounds/' + roundId + '/q/' + qid + '/votes').once('value'),
+      db.ref('oxRounds/' + roundId + '/eliminated').once('value')
+    ]).then(([pSnap, vSnap, eSnap]) => {
+      const participants = pSnap.val() || {};
+      const votes = vSnap.val() || {};
+      const alreadyOut = eSnap.val() || {};
+      const updates = {};
+      Object.keys(participants).forEach(cid => {
+        if (alreadyOut[cid]) return; // 이미 탈락한 사람은 그대로 구경 모드
+        const v = votes[cid];
+        if (!v || v.choice !== correct) updates[cid] = true;
+      });
+      if (Object.keys(updates).length) {
+        db.ref('oxRounds/' + roundId + '/eliminated').update(updates);
+      }
+      renderOxSurvivorTally(roundId);
+    });
+  }
+  function renderOxSurvivorTally(roundId) {
+    const wrap = document.getElementById('ox-survivor-tally');
+    if (!wrap) return;
+    if (!roundId) { wrap.innerHTML = ''; return; }
+    Promise.all([
+      db.ref('oxRounds/' + roundId + '/participants').once('value'),
+      db.ref('oxRounds/' + roundId + '/eliminated').once('value')
+    ]).then(([pSnap, eSnap]) => {
+      const participants = pSnap.val() || {};
+      const eliminated = eSnap.val() || {};
+      const byTeam = {};
+      Object.keys(participants).forEach(cid => {
+        const p = participants[cid];
+        const teamName = (teamsData[p.team] && teamsData[p.team].name) || p.team || '미지정';
+        if (!byTeam[teamName]) byTeam[teamName] = { survive:0, out:0 };
+        if (eliminated[cid]) byTeam[teamName].out++; else byTeam[teamName].survive++;
+      });
+      const names = Object.keys(byTeam).sort();
+      wrap.innerHTML = names.map(name => {
+        const s = byTeam[name];
+        return `<div class="final-row"><span>${esc(name)}</span><span>생존 ${s.survive} / 탈락 ${s.out}</span></div>`;
+      }).join('') || '<span class="hint">아직 참가자가 없어요</span>';
+    });
   }
 
   // ---------- 스피드퀴즈 ----------
+  let speedQuizBank = {};
   function renderSpeedTeamSelect() {
     const sel = document.getElementById('speed-team-select');
+    const prev = sel.value;
     const ids = Object.keys(teamsData).sort();
     sel.innerHTML = ids.map(id => `<option value="${id}">${esc(teamsData[id].name || id)}</option>`).join('');
+    if (ids.includes(prev)) sel.value = prev;
+    loadSpeedWordsForTeam();
+  }
+  function loadSpeedWordsForTeam() {
+    const teamId = document.getElementById('speed-team-select').value;
+    const words = (speedQuizBank[teamId] && speedQuizBank[teamId].words) || [];
+    for (let i = 0; i < 4; i++) {
+      document.getElementById('speed-word' + (i + 1)).value = words[i] || '';
+    }
+  }
+  function saveSpeedWords() {
+    const teamId = document.getElementById('speed-team-select').value;
+    if (!teamId) return;
+    const words = [1,2,3,4].map(n => document.getElementById('speed-word' + n).value.trim());
+    db.ref('speedQuizBank/' + teamId + '/words').set(words);
   }
   function startSpeedQuiz() {
     const teamId = document.getElementById('speed-team-select').value;
     const words = [1,2,3,4].map(n => document.getElementById('speed-word' + n).value.trim()).filter(Boolean);
     if (!teamId || words.length === 0) return alert('조와 제시어를 입력해주세요.');
-    setScreen('speedquiz', { teamId, words, currentIndex:0 });
+    saveSpeedWords();
+    setScreen('speedquiz', { teamId, words, currentIndex:0, total: words.length });
   }
   function nextSpeedWord() {
     db.ref('game/payload/currentIndex').transaction(v => (v || 0) + 1);
@@ -416,7 +608,7 @@
     const round = Number(document.getElementById('image-round-select').value);
     const teamId = document.getElementById('image-winner-team-select').value;
     if (!teamId) return alert('우승 조를 선택해주세요.');
-    const missionId = 10 + round;
+    const missionId = 10 + round; // 1라운드→미션11 ... 6라운드→미션16
     setBingo(teamId, missionId, true);
     db.ref('game/payload/winnerTeamName').set(teamsData[teamId].name || teamId);
   }
@@ -443,10 +635,21 @@
     teamsData = snap.val() || {};
     renderTeamsList();
     renderMissionList();
+    renderBingoShuffleList();
     renderRouletteTeamSelect();
     renderSpeedTeamSelect();
     renderImageWinnerSelect();
     renderFinalRanking();
+    renderOxSurvivorTally(currentOxRoundId);
+    if (currentTab === 'roulette') previewRouletteTeam();
+  });
+  db.ref('oxBank').on('value', snap => {
+    oxBankData = snap.val() || {};
+    renderOxBankList();
+  });
+  db.ref('speedQuizBank').on('value', snap => {
+    speedQuizBank = snap.val() || {};
+    loadSpeedWordsForTeam();
   });
 </script>
 </body>
