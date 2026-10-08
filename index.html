@@ -161,14 +161,14 @@
       <input type="text" id="speed-word2" placeholder="제시어 2" style="margin-top:6px;" onchange="saveSpeedWords()">
       <input type="text" id="speed-word3" placeholder="제시어 3" style="margin-top:6px;" onchange="saveSpeedWords()">
       <input type="text" id="speed-word4" placeholder="제시어 4" style="margin-top:6px;" onchange="saveSpeedWords()">
-      <div class="hint">제시어는 조를 바꿔도 자동으로 저장/불러와져요. 뷰어 화면에는 제시어가 절대 보이지 않고, 운영자 화면에만 보여요. <span id="speed-save-hint" style="color:#0a7a56; font-weight:700; opacity:0; transition:opacity .3s;">✓ 방금 저장됨</span></div>
+      <div class="hint">제시어는 조를 바꿔도 자동으로 저장/불러와져요. 이제는 뷰어 화면에도 제시어가 그대로 보여요(다들 구경하는 재미!). <span id="speed-save-hint" style="color:#0a7a56; font-weight:700; opacity:0; transition:opacity .3s;">✓ 방금 저장됨</span></div>
       <div class="row" style="margin-top:8px;">
         <button class="btn-outline" onclick="goSpeedIdle()">대기 화면 (설명)</button>
-        <button class="btn" onclick="startSpeedQuizAndReveal()">▶️ 시작 &amp; 대표에게 보여주기</button>
+        <button class="btn" onclick="startSpeedQuiz()">▶️ 시작 (60초 타이머)</button>
       </div>
-      <div class="hint">누르면 공개 화면엔 "n번째 제시어 진행중"만 뜨고, 이 폰엔 대표 전용 화면이 같이 떠요. 폰을 대표한테 건네고, 조원이 맞힐 때마다 그 화면 안의 "다음 단어" 버튼을 직접 누르게 하세요 — 그 버튼 하나로 대표가 보는 단어도 넘어가고 공개 화면 진행 상황도 동시에 넘어가요. 중간에 화면이 꺼졌으면 아래 버튼으로 수동으로도 넘길 수 있어요.</div>
+      <div class="hint">누르면 공개 화면에 제시어 1번 + 60초 타이머가 같이 떠요. 조원이 맞힐 때마다 아래 "다음 단어" 버튼을 눌러서 다음 제시어로 넘기세요. 60초 안에 4개를 다 넘기면 자동으로 성공 처리되고 그 조는 빙고를 받아요. 60초를 넘기면 실패로 끝나요(빙고 없음).</div>
       <div class="row" style="margin-top:8px;">
-        <button class="btn-outline btn-sm" onclick="nextSpeedWord()">다음 단어 → (수동, 비상용)</button>
+        <button class="btn" onclick="nextSpeedWord()">다음 단어 →</button>
       </div>
       <div class="mission-actions">
         <div id="speed-bingo-checks"></div>
@@ -209,13 +209,6 @@
       <button class="btn" onclick="publishFinal()">🏆 최종 결과 화면 송출</button>
     </div>
   </div>
-</div>
-
-<!-- 스피드퀴즈 조 대표 전용 제시어 화면: 운영 화면 다 가리고 이것만 보여줌 -->
-<div id="speed-reveal-overlay" style="display:none; position:fixed; inset:0; background:#0a7a56; color:#fff; z-index:999; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center;">
-  <div id="speed-reveal-team" style="font-size:14px; opacity:0.85; margin-bottom:14px; font-weight:700;"></div>
-  <div id="speed-reveal-words" style="font-size:32px; font-weight:800; line-height:1.6;"></div>
-  <button id="speed-reveal-next-btn" class="btn" style="margin-top:34px; background:#fff; color:#0a7a56; padding:14px 32px; font-size:16px;">다음 단어 →</button>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
