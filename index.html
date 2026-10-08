@@ -73,7 +73,6 @@
 <div class="tabs">
   <button class="tab-btn active" data-tab="teams" onclick="switchTab('teams')">조 관리</button>
   <button class="tab-btn" data-tab="bingo" onclick="switchTab('bingo')">빙고판</button>
-  <button class="tab-btn" data-tab="roulette" onclick="switchTab('roulette')">룰렛</button>
   <button class="tab-btn" data-tab="game" onclick="switchTab('game')">게임 진행</button>
   <button class="tab-btn" data-tab="final" onclick="switchTab('final')">최종 결과</button>
 </div>
@@ -103,22 +102,6 @@
   </div>
 </div>
 
-<!-- 룰렛 -->
-<div class="panel" id="panel-roulette">
-  <div class="card">
-    <div class="card-title">조별 대표 룰렛 추첨</div>
-    <select id="roulette-team-select" onchange="previewRouletteTeam()"></select>
-    <div class="row" style="margin-top:10px;">
-      <button class="btn" onclick="startRoulette()">🎯 추첨 시작</button>
-    </div>
-    <div class="hint">조를 선택하면 다같이 보는 화면에 그 조의 원판이 먼저 뜨고(정지 상태), 추첨 시작을 누르면 그때 돌아가요. 뽑힌 사람은 다음 추첨부터 제외돼요. 조원 전원이 한 번씩 다 뽑히면 그 조만 자동으로 다시 전원 포함해서 뽑아요.</div>
-  </div>
-  <div class="card" id="roulette-result-card" style="display:none;">
-    <div class="card-title">최근 추첨 결과</div>
-    <div id="roulette-result-text" style="font-size:20px; font-weight:800;"></div>
-  </div>
-</div>
-
 <!-- 게임 진행 -->
 <div class="panel" id="panel-game">
   <div class="subtab-bar">
@@ -132,7 +115,7 @@
       <div class="card-title">즉석 OX 퀴즈 서바이벌 (미션 7)</div>
       <div class="row">
         <button class="btn" onclick="startNewOxRound()">🆕 새 서바이벌 시작</button>
-        <button class="btn-outline" onclick="goOxIdle()">대기 화면으로</button>
+        <button class="btn-outline" id="ox-idle-btn" onclick="goOxIdle()" disabled>대기 화면으로</button>
       </div>
       <div class="hint" id="ox-round-status">아직 서바이벌이 시작되지 않았어요. 먼저 "새 서바이벌 시작"을 눌러주세요.</div>
     </div>
@@ -146,15 +129,20 @@
         </select>
         <button class="btn-sm btn" onclick="addOxBankQuestion()">추가</button>
       </div>
+      <div class="hint">⚡ 이번 서바이벌의 7번째로 출제하는 문제는 자동으로 "패자부활전"이 돼요(탈락자만 참여, 생존자는 구경 → 맞히면 부활해서 8번째 문제부터 다시 합류).</div>
       <div id="ox-bank-list" style="margin-top:10px;"></div>
     </div>
     <div class="card">
       <div class="card-title">정답 공개 &amp; 탈락 처리</div>
-      <div class="row">
+      <div class="hint" id="ox-question-number-hint">아직 출제된 문제가 없어요.</div>
+      <div class="row" style="margin-top:8px;">
         <button class="btn-outline" onclick="revealOxBankAnswer()">정답 공개하기</button>
       </div>
-      <div class="hint">출제중인 문제의 정답을 공개하면서, 오답/무응답자를 자동으로 탈락 처리해요. (이미 탈락한 사람은 그대로 구경 모드 유지)</div>
-      <div id="ox-survivor-tally" style="margin-top:10px;"></div>
+      <div class="hint">출제중인 문제의 정답을 공개하면서, 오답/무응답자를 자동으로 탈락 처리해요. (패자부활전 문제는 반대로: 탈락자가 맞히면 부활)</div>
+    </div>
+    <div class="card">
+      <div class="card-title">참가 현황 (실시간)</div>
+      <div id="ox-survivor-tally"></div>
     </div>
     <div class="card">
       <div class="card-title">OX퀴즈 승리 조 빙고 체크</div>
@@ -173,8 +161,9 @@
       <input type="text" id="speed-word2" placeholder="제시어 2" style="margin-top:6px;" onchange="saveSpeedWords()">
       <input type="text" id="speed-word3" placeholder="제시어 3" style="margin-top:6px;" onchange="saveSpeedWords()">
       <input type="text" id="speed-word4" placeholder="제시어 4" style="margin-top:6px;" onchange="saveSpeedWords()">
-      <div class="hint">제시어는 조를 바꿔도 자동으로 저장/불러와져요. 뷰어 화면에는 제시어가 절대 안 보이고, 운영자 화면에만 보여요.</div>
+      <div class="hint">제시어는 조를 바꿔도 자동으로 저장/불러와져요. 뷰어 화면에는 제시어가 절대 보이지 않고, 운영자 화면에만 보여요.</div>
       <div class="row" style="margin-top:8px;">
+        <button class="btn-outline" onclick="goSpeedIdle()">대기 화면 (설명)</button>
         <button class="btn" onclick="startSpeedQuiz()">시작 (화면 송출)</button>
       </div>
       <div class="row" style="margin-top:8px;">
@@ -260,7 +249,6 @@
     currentTab = key;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === key));
     document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + key));
-    if (key === 'roulette') previewRouletteTeam();
   }
   function switchSubtab(key) {
     document.querySelectorAll('.subtab-btn').forEach(b => b.classList.toggle('active', b.dataset.sub === key));
@@ -398,45 +386,14 @@
     db.ref('teams/' + teamId).update({ layout: null, layoutLocked: null });
   }
 
-  // ---------- 룰렛 ----------
-  function renderRouletteTeamSelect() {
-    const sel = document.getElementById('roulette-team-select');
-    const prev = sel.value;
-    const ids = Object.keys(teamsData).sort();
-    sel.innerHTML = ids.map(id => `<option value="${id}">${esc(teamsData[id].name || id)}</option>`).join('');
-    if (ids.includes(prev)) sel.value = prev;
-  }
-  function previewRouletteTeam() {
-    const sel = document.getElementById('roulette-team-select');
-    const teamId = sel.value;
-    if (!teamId) return;
-    const t = teamsData[teamId] || {};
-    const pool = (t.pool && t.pool.length) ? t.pool : (t.members || []);
-    setScreen('roulette', { teamId, pool, phase:'idle' });
-  }
-  function startRoulette() {
-    const teamId = document.getElementById('roulette-team-select').value;
-    if (!teamId) return alert('조를 먼저 추가해주세요.');
-    const t = teamsData[teamId];
-    let pool = (t.pool && t.pool.length) ? t.pool.slice() : (t.members || []).slice();
-    if (pool.length === 0) return alert('이 조에는 아직 조원이 없어요.');
-    const idx = Math.floor(Math.random() * pool.length);
-    const winner = pool[idx];
-    const newPool = pool.slice(); newPool.splice(idx, 1);
-
-    // 원판 룰렛 애니메이션에 필요한 pool/winnerIndex를 같이 보내요.
-    // 당첨자는 이미 여기서 정해지고, view.html은 그 결과로 수렴하는 연출만 재생해요.
-    // phase:'spinning'이 있어야 view.html이 실제로 돌리는 애니메이션을 재생해요.
-    setScreen('roulette', { teamId, pool, phase:'spinning', winnerIndex: idx, resultName: winner, spinId: Date.now() });
-    db.ref('teams/' + teamId + '/pool').set(newPool);
-    document.getElementById('roulette-result-card').style.display = 'block';
-    document.getElementById('roulette-result-text').textContent = (t.name || teamId) + ' → ' + winner;
-  }
-
   // ---------- OX퀴즈 ----------
   let oxBankData = {};
   let currentOxRoundId = null;
   let currentOxQid = null;
+  let currentOxQuestionNumber = 0;
+  let currentOxRevival = false;
+  let oxRosterParticipantsRef = null;
+  let oxRosterEliminatedRef = null;
 
   function addOxBankQuestion() {
     const qInput = document.getElementById('ox-bank-question');
@@ -473,10 +430,14 @@
     const roundId = 'round_' + Date.now();
     currentOxRoundId = roundId;
     currentOxQid = null;
+    currentOxQuestionNumber = 0;
+    currentOxRevival = false;
     setScreen('oxquiz', { roundId, mode:'idle' });
     document.getElementById('ox-round-status').textContent = '서바이벌 진행중이에요. 참가자들이 각자 폰으로 접속하면 자동으로 참가 폼이 떠요.';
+    document.getElementById('ox-idle-btn').disabled = false;
+    document.getElementById('ox-question-number-hint').textContent = '아직 출제된 문제가 없어요.';
     renderOxBankList();
-    renderOxSurvivorTally(roundId);
+    attachOxRosterListeners(roundId);
   }
   function goOxIdle() {
     if (!currentOxRoundId) return alert('먼저 "새 서바이벌 시작"을 눌러주세요.');
@@ -489,18 +450,27 @@
     const q = oxBankData[bankId];
     if (!q) return;
     currentOxQid = bankId;
+    currentOxQuestionNumber += 1;
+    currentOxRevival = (currentOxQuestionNumber === 7);
     const deadline = Date.now() + 10000;
-    setScreen('oxquiz', { roundId: currentOxRoundId, mode:'question', qid: bankId, question: q.question, deadline, answer: null });
+    setScreen('oxquiz', { roundId: currentOxRoundId, mode:'question', qid: bankId, question: q.question, deadline, answer: null, questionNumber: currentOxQuestionNumber, revival: currentOxRevival });
     renderOxBankList();
+    const hint = document.getElementById('ox-question-number-hint');
+    hint.textContent = currentOxRevival
+      ? `⚡ 이번 서바이벌의 ${currentOxQuestionNumber}번째 문제 — 패자부활전! (탈락자만 참여, 생존자는 구경)`
+      : `이번 서바이벌의 ${currentOxQuestionNumber}번째 문제가 출제중이에요.`;
   }
   function revealOxBankAnswer() {
     if (!currentOxRoundId || !currentOxQid) return alert('먼저 문제를 출제해주세요.');
     const correct = oxBankData[currentOxQid] && oxBankData[currentOxQid].answer;
-    db.ref('game/payload').update({ mode:'revealed', answer: correct });
-    computeOxElimination(currentOxRoundId, currentOxQid, correct);
+    // 탈락 처리를 먼저 끝내고(DB에 다 써진 뒤) "정답 공개" 화면을 내보내야
+    // 뷰어가 정답 화면에서 본인 생존/탈락 여부를 정확하게 읽을 수 있음(순서가 바뀌면 타이밍 꼬임)
+    computeOxElimination(currentOxRoundId, currentOxQid, correct, currentOxRevival).then(() => {
+      db.ref('game/payload').update({ mode:'revealed', answer: correct });
+    });
   }
-  function computeOxElimination(roundId, qid, correct) {
-    Promise.all([
+  function computeOxElimination(roundId, qid, correct, revival) {
+    return Promise.all([
       db.ref('oxRounds/' + roundId + '/participants').once('value'),
       db.ref('oxRounds/' + roundId + '/q/' + qid + '/votes').once('value'),
       db.ref('oxRounds/' + roundId + '/eliminated').once('value')
@@ -510,17 +480,37 @@
       const alreadyOut = eSnap.val() || {};
       const updates = {};
       Object.keys(participants).forEach(cid => {
-        if (alreadyOut[cid]) return; // 이미 탈락한 사람은 그대로 구경 모드
+        const isOut = !!alreadyOut[cid];
         const v = votes[cid];
-        if (!v || v.choice !== correct) updates[cid] = true;
+        if (revival) {
+          if (!isOut) return; // 원래 생존자는 패자부활전 결과와 무관(구경만 함)
+          if (v && v.choice === correct) updates[cid] = null; // 맞히면 부활(탈락 기록 삭제)
+          // 틀리거나 무응답이면 그대로 탈락 유지
+        } else {
+          if (isOut) return; // 이미 탈락한 사람은 그대로 구경 모드
+          if (!v || v.choice !== correct) updates[cid] = true;
+        }
       });
       if (Object.keys(updates).length) {
-        db.ref('oxRounds/' + roundId + '/eliminated').update(updates);
+        return db.ref('oxRounds/' + roundId + '/eliminated').update(updates);
       }
-      renderOxSurvivorTally(roundId);
     });
   }
-  function renderOxSurvivorTally(roundId) {
+
+  // 참가 현황: 조별 입장 인원/정원 + 생존·탈락 실시간 표시
+  function attachOxRosterListeners(roundId) {
+    detachOxRosterListeners();
+    if (!roundId) return;
+    oxRosterParticipantsRef = db.ref('oxRounds/' + roundId + '/participants');
+    oxRosterEliminatedRef = db.ref('oxRounds/' + roundId + '/eliminated');
+    oxRosterParticipantsRef.on('value', () => renderOxRosterLive(roundId));
+    oxRosterEliminatedRef.on('value', () => renderOxRosterLive(roundId));
+  }
+  function detachOxRosterListeners() {
+    if (oxRosterParticipantsRef) { oxRosterParticipantsRef.off(); oxRosterParticipantsRef = null; }
+    if (oxRosterEliminatedRef) { oxRosterEliminatedRef.off(); oxRosterEliminatedRef = null; }
+  }
+  function renderOxRosterLive(roundId) {
     const wrap = document.getElementById('ox-survivor-tally');
     if (!wrap) return;
     if (!roundId) { wrap.innerHTML = ''; return; }
@@ -533,15 +523,23 @@
       const byTeam = {};
       Object.keys(participants).forEach(cid => {
         const p = participants[cid];
-        const teamName = (teamsData[p.team] && teamsData[p.team].name) || p.team || '미지정';
-        if (!byTeam[teamName]) byTeam[teamName] = { survive:0, out:0 };
-        if (eliminated[cid]) byTeam[teamName].out++; else byTeam[teamName].survive++;
+        if (!byTeam[p.team]) byTeam[p.team] = [];
+        byTeam[p.team].push({ name: p.name, out: !!eliminated[cid] });
       });
-      const names = Object.keys(byTeam).sort();
-      wrap.innerHTML = names.map(name => {
-        const s = byTeam[name];
-        return `<div class="final-row"><span>${esc(name)}</span><span>생존 ${s.survive} / 탈락 ${s.out}</span></div>`;
-      }).join('') || '<span class="hint">아직 참가자가 없어요</span>';
+      const teamIds = Object.keys(teamsData).sort();
+      wrap.innerHTML = teamIds.map(tid => {
+        const t = teamsData[tid];
+        const list = byTeam[tid] || [];
+        const maxCap = (t.members || []).length;
+        const aliveCount = list.filter(p => !p.out).length;
+        const names = list.length
+          ? list.map(p => p.out ? `<span style="text-decoration:line-through; opacity:0.5;">${esc(p.name)}</span>` : esc(p.name)).join(', ')
+          : '<span class="hint">아직 입장한 사람 없음</span>';
+        return `<div class="mission-row" style="padding:8px 0;">
+          <div style="font-size:12px; font-weight:800; margin-bottom:4px;">${esc(t.name || tid)} <span class="hint">(입장 ${list.length}/${maxCap}명 · 생존 ${aliveCount}명)</span></div>
+          <div style="font-size:12px; line-height:1.6;">${names}</div>
+        </div>`;
+      }).join('') || '<span class="hint">아직 조가 없어요</span>';
     });
   }
 
@@ -567,6 +565,9 @@
     if (!teamId) return;
     const words = [1,2,3,4].map(n => document.getElementById('speed-word' + n).value.trim());
     db.ref('speedQuizBank/' + teamId + '/words').set(words);
+  }
+  function goSpeedIdle() {
+    setScreen('speedquiz', { mode:'idle' });
   }
   function startSpeedQuiz() {
     const teamId = document.getElementById('speed-team-select').value;
@@ -645,12 +646,10 @@
     renderTeamsList();
     renderMissionList();
     renderBingoShuffleList();
-    renderRouletteTeamSelect();
     renderSpeedTeamSelect();
     renderImageWinnerSelect();
     renderFinalRanking();
-    renderOxSurvivorTally(currentOxRoundId);
-    if (currentTab === 'roulette') previewRouletteTeam();
+    renderOxRosterLive(currentOxRoundId);
   });
   db.ref('oxBank').on('value', snap => {
     oxBankData = snap.val() || {};
