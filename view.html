@@ -358,9 +358,9 @@
     app.innerHTML = `
       <div class="mission-badge">OX 퀴즈 서바이벌 참가</div>
       <div class="join-form">
-        <label>내 이름 (재밌게 적어도 돼요!)</label>
-        <input type="text" id="ox-join-name" value="${esc(saved.name)}" placeholder="예: 떡잎전사">
-        <label style="display:block; margin-top:10px;">우리 조</label>
+        <label>닉네임</label>
+        <input type="text" id="ox-join-name" value="${esc(saved.name)}" placeholder="예: 떡잎왕">
+        <label style="display:block; margin-top:10px;">우리 조 선택</label>
         <select id="ox-join-team">${opts}</select>
         <button onclick="submitOxJoin()">입장하기</button>
       </div>`;
