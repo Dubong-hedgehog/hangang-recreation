@@ -344,13 +344,12 @@
     const winner = pool[idx];
     const newPool = pool.slice(); newPool.splice(idx, 1);
 
-    setScreen('roulette', { teamId, phase:'spinning' });
-    setTimeout(() => {
-      setScreen('roulette', { teamId, phase:'result', resultName: winner });
-      db.ref('teams/' + teamId + '/pool').set(newPool);
-      document.getElementById('roulette-result-card').style.display = 'block';
-      document.getElementById('roulette-result-text').textContent = (t.name || teamId) + ' → ' + winner;
-    }, 2500);
+    // 원판 룰렛 애니메이션에 필요한 pool/winnerIndex를 같이 보내요.
+    // 당첨자는 이미 여기서 정해지고, view.html은 그 결과로 수렴하는 연출만 재생해요.
+    setScreen('roulette', { teamId, pool, winnerIndex: idx, resultName: winner, spinId: Date.now() });
+    db.ref('teams/' + teamId + '/pool').set(newPool);
+    document.getElementById('roulette-result-card').style.display = 'block';
+    document.getElementById('roulette-result-text').textContent = (t.name || teamId) + ' → ' + winner;
   }
 
   // ---------- OX퀴즈 ----------
