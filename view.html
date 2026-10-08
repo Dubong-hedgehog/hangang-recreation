@@ -345,15 +345,19 @@
     const targetRotation = spins * 360 + (360 - winnerMidAngle);
     const duration = 4.2;
 
-    // 더블 rAF로 애니메이션이 확실히 재생되도록 함
-    svg.style.transition = 'none';
+    // CSS transition을 0으로 되돌렸다가 다시 트는 방식(rAF 트릭)은 기기/브라우저에 따라
+    // "리플로우"가 한 프레임 안에 묶여버려서 애니메이션 없이 바로 최종 각도로 점프해버리는
+    // 경우가 있음(특히 모바일 브라우저). 그래서 Web Animations API(svg.animate)로 직접
+    // 애니메이션을 만들어서 트는 방식으로 교체 — 이 방식은 리플로우 타이밍에 의존하지 않아
+    // 훨씬 안정적으로 재생됨.
     svg.style.transform = 'rotate(0deg)';
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        svg.style.transition = `transform ${duration}s cubic-bezier(0.1,0.7,0.1,1)`;
-        svg.style.transform = `rotate(${targetRotation}deg)`;
-      });
-    });
+    const anim = svg.animate(
+      [
+        { transform: 'rotate(0deg)' },
+        { transform: `rotate(${targetRotation}deg)` }
+      ],
+      { duration: duration * 1000, easing: 'cubic-bezier(0.1,0.7,0.1,1)', fill: 'forwards' }
+    );
 
     // 틱 소리: 처음엔 빠르게, 점점 느려지게
     let elapsed = 0;
@@ -367,15 +371,15 @@
     }
     setTimeout(scheduleTick, 200);
 
-    svg.addEventListener('transitionend', function handler() {
-      svg.removeEventListener('transitionend', handler);
+    anim.onfinish = () => {
+      svg.style.transform = `rotate(${targetRotation}deg)`;
       playDing();
       const nameEl = document.getElementById('roulette-winner-name');
       if (nameEl) {
         nameEl.textContent = '🎉 ' + (payload.resultName || '') + ' 당첨!';
         nameEl.style.opacity = '1';
       }
-    });
+    };
   }
 
   // ---------- OX 퀴즈 ----------
@@ -481,7 +485,7 @@
         const nowOut = snap.exists();
         const badge = eliminated
           ? `<div class="ox-result-badge out">땡!! 아쉽지만 살아남은 조원과 함께 끝까지 진행 해봐요!</div>`
-          : (nowOut ? `<div class="ox-result-badge out">😭 탈락!</div>` : `<div class="ox-result-badge survive">🎉 생존!</div>`);
+          : (nowOut ? `<div class="ox-result-badge out">😭땡!😭</div>` : `<div class="ox-result-badge survive">🎉정답!🎉</div>`);
         if (!eliminated && nowOut) playBuzz(); else if (!eliminated) playDing();
         app.innerHTML = `
           <div class="mission-badge">정답 공개</div>
