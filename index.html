@@ -161,7 +161,7 @@
       <input type="text" id="speed-word2" placeholder="제시어 2" style="margin-top:6px;" onchange="saveSpeedWords()">
       <input type="text" id="speed-word3" placeholder="제시어 3" style="margin-top:6px;" onchange="saveSpeedWords()">
       <input type="text" id="speed-word4" placeholder="제시어 4" style="margin-top:6px;" onchange="saveSpeedWords()">
-      <div class="hint">제시어는 조를 바꿔도 자동으로 저장/불러와져요. 뷰어 화면에는 제시어가 절대 보이지 않고, 운영자 화면에만 보여요.</div>
+      <div class="hint">제시어는 조를 바꿔도 자동으로 저장/불러와져요. 뷰어 화면에는 제시어가 절대 보이지 않고, 운영자 화면에만 보여요. <span id="speed-save-hint" style="color:#0a7a56; font-weight:700; opacity:0; transition:opacity .3s;">✓ 방금 저장됨</span></div>
       <div class="row" style="margin-top:8px;">
         <button class="btn-outline" onclick="goSpeedIdle()">대기 화면 (설명)</button>
         <button class="btn" onclick="startSpeedQuiz()">시작 (화면 송출)</button>
@@ -553,7 +553,13 @@
     if (ids.includes(prev)) sel.value = prev;
     loadSpeedWordsForTeam();
   }
+  function speedWordInputFocused() {
+    // 제시어 입력칸 중 하나라도 지금 타이핑 중이면 true
+    const active = document.activeElement;
+    return !!(active && active.id && active.id.indexOf('speed-word') === 0);
+  }
   function loadSpeedWordsForTeam() {
+    if (speedWordInputFocused()) return; // 타이핑 중엔 서버 값으로 덮어쓰지 않음
     const teamId = document.getElementById('speed-team-select').value;
     const words = (speedQuizBank[teamId] && speedQuizBank[teamId].words) || [];
     for (let i = 0; i < 4; i++) {
@@ -564,7 +570,13 @@
     const teamId = document.getElementById('speed-team-select').value;
     if (!teamId) return;
     const words = [1,2,3,4].map(n => document.getElementById('speed-word' + n).value.trim());
-    db.ref('speedQuizBank/' + teamId + '/words').set(words);
+    db.ref('speedQuizBank/' + teamId + '/words').set(words).then(() => {
+      const hint = document.getElementById('speed-save-hint');
+      if (!hint) return;
+      hint.style.opacity = '1';
+      clearTimeout(saveSpeedWords._t);
+      saveSpeedWords._t = setTimeout(() => { hint.style.opacity = '0'; }, 1200);
+    });
   }
   function goSpeedIdle() {
     setScreen('speedquiz', { mode:'idle' });
