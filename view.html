@@ -511,8 +511,8 @@
     if (payload.mode === 'idle' || !payload.teamId) {
       app.innerHTML = `
         <div class="mission-badge">스피드퀴즈</div>
-        <div class="mission-title">조 대표는 제시어를 어떤 방식으로든<br>표현 해주세요!</div>
-        <div class="mission-desc">가장 빠르게 제시어 4개를 맞춘 조가 승리합니다!</div>`;
+        <div class="mission-title">앞에 보이는 제시어를 어떤 방식으로든<br>표현 해주세요!</div>
+        <div class="mission-desc">60초 내에 제시어 4개를 맞추면 통과입니다!</div>`;
       return;
     }
     const team = (teams && teams[payload.teamId]) || {};
