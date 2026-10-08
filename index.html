@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>레크레이션 운영자 컨트롤</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; background:#f2f4f3; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Apple SD Gothic Neo','Malgun Gothic',sans-serif; color:#1a2420; padding-bottom:40px; }
+  .topbar { background:linear-gradient(135deg,#1D9E75,#0a7a56); color:#fff; padding:14px 16px; position:sticky; top:0; z-index:20; }
+  .topbar-title { font-size:15px; font-weight:800; }
+  .topbar-status { font-size:12px; margin-top:4px; color:rgba(255,255,255,0.85); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .btn-waiting { background:rgba(255,255,255,0.2); border:none; color:#fff; border-radius:8px; padding:4px 10px; font-size:11px; font-weight:700; }
+
+  .tabs { display:flex; overflow-x:auto; background:#fff; border-bottom:1px solid #e3e8e5; position:sticky; top:54px; z-index:19; }
+  .tab-btn { flex:1; min-width:70px; padding:11px 4px; text-align:center; font-size:12px; font-weight:700; color:#8a958f; border:none; background:none; border-bottom:3px solid transparent; white-space:nowrap; }
+  .tab-btn.active { color:#0a7a56; border-bottom-color:#0a7a56; }
+
+  .panel { display:none; padding:16px; max-width:720px; margin:0 auto; }
+  .panel.active { display:block; }
+
+  .card { background:#fff; border-radius:14px; padding:14px; margin-bottom:12px; box-shadow:0 1px 4px rgba(0,0,0,0.05); }
+  .card-title { font-size:14px; font-weight:800; margin-bottom:10px; }
+  .row { display:flex; gap:6px; align-items:center; }
+  input[type=text], input[type=number], textarea, select { border:1px solid #d8ded9; border-radius:8px; padding:9px 10px; font-size:14px; width:100%; font-family:inherit; }
+  textarea { resize:vertical; min-height:50px; }
+  button { cursor:pointer; }
+  .btn { background:#0a7a56; color:#fff; border:none; border-radius:8px; padding:9px 12px; font-size:13px; font-weight:700; white-space:nowrap; }
+  .btn-outline { background:#fff; color:#0a7a56; border:1px solid #0a7a56; border-radius:8px; padding:9px 12px; font-size:13px; font-weight:700; white-space:nowrap; }
+  .btn-sm { padding:6px 9px; font-size:12px; border-radius:7px; }
+  .btn-danger { background:#fff; color:#d9534f; border:1px solid #f0c2c0; border-radius:8px; padding:6px 9px; font-size:12px; font-weight:700; }
+  .chip { display:inline-flex; align-items:center; gap:6px; background:#eef5f1; border-radius:20px; padding:5px 6px 5px 12px; font-size:13px; font-weight:600; margin:3px 4px 0 0; }
+  .chip button { background:none; border:none; color:#d9534f; font-size:14px; font-weight:800; width:20px; height:20px; border-radius:50%; }
+
+  .team-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .team-head input[type=text] { font-weight:800; font-size:15px; border:none; background:none; padding:4px 0; width:auto; flex:1; }
+
+  .mission-row { border-bottom:1px solid #eef1ef; padding:10px 0; }
+  .mission-row:last-child { border-bottom:none; }
+  .mission-row-title { font-size:13px; font-weight:700; margin-bottom:6px; }
+  .mission-check-wrap { display:flex; flex-wrap:wrap; gap:6px; }
+  .team-check { display:flex; align-items:center; gap:4px; background:#f5f7f6; border-radius:7px; padding:5px 8px; font-size:12px; font-weight:600; }
+  .team-check input { width:15px; height:15px; }
+  .mission-actions { margin-top:6px; }
+
+  .subtab-bar { display:flex; gap:6px; margin-bottom:12px; }
+  .subtab-btn { flex:1; padding:8px 4px; border-radius:8px; border:1px solid #d8ded9; background:#fff; font-size:12px; font-weight:700; color:#6b756f; }
+  .subtab-btn.active { background:#0a7a56; color:#fff; border-color:#0a7a56; }
+  .subpanel { display:none; }
+  .subpanel.active { display:block; }
+
+  .final-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid #eef1ef; font-size:14px; font-weight:700; }
+  .final-row:last-child { border-bottom:none; }
+
+  .hint { font-size:11px; color:#8a958f; margin-top:6px; line-height:1.5; }
+  .img-preview { max-width:100%; max-height:160px; border-radius:10px; margin-top:8px; display:block; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title">🎮 레크레이션 운영자 컨트롤</div>
+  <div class="topbar-status">
+    <span>현재 송출 화면: <b id="current-screen-label">-</b></span>
+    <button class="btn-waiting" onclick="goWaiting()">대기화면으로</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="teams" onclick="switchTab('teams')">조 관리</button>
+  <button class="tab-btn" data-tab="bingo" onclick="switchTab('bingo')">빙고판</button>
+  <button class="tab-btn" data-tab="roulette" onclick="switchTab('roulette')">룰렛</button>
+  <button class="tab-btn" data-tab="game" onclick="switchTab('game')">게임 진행</button>
+  <button class="tab-btn" data-tab="final" onclick="switchTab('final')">최종 결과</button>
+</div>
+
+<!-- 조 관리 -->
+<div class="panel active" id="panel-teams">
+  <div class="card">
+    <button class="btn" onclick="addTeam()">+ 조 추가</button>
+  </div>
+  <div id="teams-list"></div>
+</div>
+
+<!-- 빙고판 -->
+<div class="panel" id="panel-bingo">
+  <div class="card">
+    <div class="card-title">조별 빙고 현황 화면 송출</div>
+    <button class="btn" onclick="showBingoBoard()">📋 다같이 보는 화면에 빙고판 띄우기</button>
+  </div>
+  <div class="card">
+    <div class="card-title">미션별 완료 조 체크</div>
+    <div id="mission-list"></div>
+  </div>
+</div>
+
+<!-- 룰렛 -->
+<div class="panel" id="panel-roulette">
+  <div class="card">
+    <div class="card-title">조별 대표 룰렛 추첨</div>
+    <select id="roulette-team-select"></select>
+    <div class="row" style="margin-top:10px;">
+      <button class="btn" onclick="startRoulette()">🎯 추첨 시작</button>
+    </div>
+    <div class="hint">뽑힌 사람은 다음 추첨부터 제외돼요. 조원 전원이 한 번씩 다 뽑히면 그 조만 자동으로 다시 전원 포함해서 뽑아요.</div>
+  </div>
+  <div class="card" id="roulette-result-card" style="display:none;">
+    <div class="card-title">최근 추첨 결과</div>
+    <div id="roulette-result-text" style="font-size:20px; font-weight:800;"></div>
+  </div>
+</div>
+
+<!-- 게임 진행 -->
+<div class="panel" id="panel-game">
+  <div class="subtab-bar">
+    <button class="subtab-btn active" data-sub="ox" onclick="switchSubtab('ox')">OX퀴즈</button>
+    <button class="subtab-btn" data-sub="speed" onclick="switchSubtab('speed')">스피드퀴즈</button>
+    <button class="subtab-btn" data-sub="image" onclick="switchSubtab('image')">이미지게임</button>
+  </div>
+
+  <div class="subpanel active" id="sub-ox">
+    <div class="card">
+      <div class="card-title">즉석 OX 퀴즈 (미션 7)</div>
+      <textarea id="ox-question" placeholder="문제를 입력하세요"></textarea>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn" onclick="publishOxQuestion()">질문 공개</button>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn-outline" onclick="revealOxAnswer('O')">정답 공개: ⭕</button>
+        <button class="btn-outline" onclick="revealOxAnswer('X')">정답 공개: ❌</button>
+      </div>
+      <div class="hint">탈락 판정은 현장에서 직접 눈으로 보고 진행해주세요. 마지막까지 남은 사람이 속한 조를 아래서 완료 체크하면 돼요.</div>
+      <div class="mission-actions">
+        <div id="ox-bingo-checks"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subpanel" id="sub-speed">
+    <div class="card">
+      <div class="card-title">스피드퀴즈 (미션 9)</div>
+      <select id="speed-team-select"></select>
+      <input type="text" id="speed-word1" placeholder="제시어 1" style="margin-top:8px;">
+      <input type="text" id="speed-word2" placeholder="제시어 2" style="margin-top:6px;">
+      <input type="text" id="speed-word3" placeholder="제시어 3" style="margin-top:6px;">
+      <input type="text" id="speed-word4" placeholder="제시어 4" style="margin-top:6px;">
+      <div class="row" style="margin-top:8px;">
+        <button class="btn" onclick="startSpeedQuiz()">시작 (화면 송출)</button>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn-outline" onclick="nextSpeedWord()">다음 단어 →</button>
+      </div>
+      <div class="mission-actions">
+        <div id="speed-bingo-checks"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subpanel" id="sub-image">
+    <div class="card">
+      <div class="card-title">이미지게임 (미션 11~16)</div>
+      <select id="image-round-select">
+        <option value="1">1라운드 (미션11)</option>
+        <option value="2">2라운드 (미션12)</option>
+        <option value="3">3라운드 (미션13)</option>
+        <option value="4">4라운드 (미션14)</option>
+        <option value="5">5라운드 (미션15)</option>
+        <option value="6">6라운드 (미션16)</option>
+      </select>
+      <input type="file" accept="image/*" id="image-file-input" style="margin-top:8px;" onchange="onImageSelected(this)">
+      <img id="image-preview" class="img-preview" style="display:none;">
+      <div class="row" style="margin-top:8px;">
+        <button class="btn" onclick="publishImageGame()">화면에 공개</button>
+      </div>
+      <select id="image-winner-team-select" style="margin-top:10px;"></select>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn-outline" onclick="confirmImageWinner()">🏆 우승 조 확정 (빙고 체크)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 최종 결과 -->
+<div class="panel" id="panel-final">
+  <div class="card">
+    <div class="card-title">조별 빙고 달성 현황</div>
+    <div id="final-ranking-list"></div>
+    <div class="row" style="margin-top:10px;">
+      <button class="btn" onclick="publishFinal()">🏆 최종 결과 화면 송출</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+  const MISSIONS = {
+    1:{title:'쓰레기 종류 10개 이상 줍기'}, 2:{title:'담배꽁초 10개 이상 줍기'},
+    3:{title:'플로깅 코스 시간 내 완주하기'}, 4:{title:'제일 특이한/오래된 쓰레기 줍기'},
+    5:{title:'"떡잎마을방범대" 글자 찾기'}, 6:{title:'우리 조원 이름 맞히기'},
+    7:{title:'즉석 OX 퀴즈 서바이벌'}, 8:{title:'절대음감'},
+    9:{title:'스피드퀴즈'}, 10:{title:'쿵쿵따'},
+    11:{title:'이미지게임 1라운드'}, 12:{title:'이미지게임 2라운드'},
+    13:{title:'이미지게임 3라운드'}, 14:{title:'이미지게임 4라운드'},
+    15:{title:'이미지게임 5라운드'}, 16:{title:'이미지게임 6라운드'}
+  };
+
+  let teamsData = {};
+  let selectedImageBase64 = null;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- 공용: 화면 전환 ----------
+  function goWaiting() {
+    db.ref('game').set({ screen:'waiting', payload:{} });
+  }
+  function setScreen(screen, payload) {
+    db.ref('game').set({ screen, payload: payload || {} });
+  }
+  db.ref('game/screen').on('value', snap => {
+    document.getElementById('current-screen-label').textContent = snap.val() || '-';
+  });
+
+  // ---------- 탭 전환 ----------
+  function switchTab(key) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === key));
+    document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + key));
+  }
+  function switchSubtab(key) {
+    document.querySelectorAll('.subtab-btn').forEach(b => b.classList.toggle('active', b.dataset.sub === key));
+    document.querySelectorAll('.subpanel').forEach(p => p.classList.toggle('active', p.id === 'sub-' + key));
+  }
+
+  // ---------- 조 관리 ----------
+  function addTeam() {
+    const name = prompt('새 조 이름 (예: 7조)');
+    if (!name) return;
+    const id = 'team_' + Date.now();
+    db.ref('teams/' + id).set({ name, members: [], pool: [], bingo: {} });
+  }
+  function deleteTeam(id) {
+    if (!confirm('이 조를 삭제할까요? 명단과 빙고 기록이 전부 사라져요.')) return;
+    db.ref('teams/' + id).remove();
+  }
+  function renameTeam(id, name) {
+    db.ref('teams/' + id + '/name').set(name);
+  }
+  function addMember(id) {
+    const input = document.getElementById('member-input-' + id);
+    const name = (input.value || '').trim();
+    if (!name) return;
+    const t = teamsData[id] || {};
+    const members = (t.members || []).concat([name]);
+    const pool = (t.pool || []).concat([name]);
+    db.ref('teams/' + id).update({ members, pool });
+    input.value = '';
+  }
+  function removeMember(id, name) {
+    const t = teamsData[id] || {};
+    const members = (t.members || []).filter(m => m !== name);
+    const pool = (t.pool || []).filter(m => m !== name);
+    db.ref('teams/' + id).update({ members, pool });
+  }
+
+  function renderTeamsList() {
+    const wrap = document.getElementById('teams-list');
+    const ids = Object.keys(teamsData).sort();
+    wrap.innerHTML = ids.map(id => {
+      const t = teamsData[id];
+      const members = t.members || [];
+      const chips = members.map(m => `<span class="chip">${esc(m)}<button onclick="removeMember('${id}','${esc(m).replace(/'/g, "\\'")}')">×</button></span>`).join('');
+      return `<div class="card">
+        <div class="team-head">
+          <input type="text" value="${esc(t.name || '')}" onchange="renameTeam('${id}', this.value)">
+          <button class="btn-danger" onclick="deleteTeam('${id}')">조 삭제</button>
+        </div>
+        <div class="row">
+          <input type="text" id="member-input-${id}" placeholder="이름 입력 후 추가">
+          <button class="btn-sm btn" onclick="addMember('${id}')">추가</button>
+        </div>
+        <div style="margin-top:8px;">${chips || '<span class="hint">아직 조원이 없어요</span>'}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ---------- 빙고판 ----------
+  function setBingo(teamId, missionId, value) {
+    db.ref('teams/' + teamId + '/bingo/' + missionId).set(value);
+  }
+  function showBingoBoard() {
+    setScreen('bingoBoard', {});
+  }
+  function showMissionIntro(missionId) {
+    setScreen('missionIntro', { missionId });
+  }
+
+  function missionBingoChecksHtml(missionId) {
+    const ids = Object.keys(teamsData).sort();
+    return ids.map(id => {
+      const t = teamsData[id];
+      const checked = !!(t.bingo && t.bingo[missionId]);
+      return `<label class="team-check">
+        <input type="checkbox" ${checked ? 'checked' : ''} onchange="setBingo('${id}', ${missionId}, this.checked)">
+        ${esc(t.name || id)}
+      </label>`;
+    }).join('');
+  }
+
+  function renderMissionList() {
+    const wrap = document.getElementById('mission-list');
+    let html = '';
+    for (let i = 1; i <= 16; i++) {
+      html += `<div class="mission-row">
+        <div class="mission-row-title">${i}. ${esc(MISSIONS[i].title)}</div>
+        <div class="mission-check-wrap">${missionBingoChecksHtml(i)}</div>
+        <div class="mission-actions">
+          <button class="btn-sm btn-outline" onclick="showMissionIntro(${i})">화면에 미션 설명 띄우기</button>
+        </div>
+      </div>`;
+    }
+    wrap.innerHTML = html;
+    const oxWrap = document.getElementById('ox-bingo-checks');
+    if (oxWrap) oxWrap.innerHTML = '<div class="mission-check-wrap">' + missionBingoChecksHtml(7) + '</div>';
+    const speedWrap = document.getElementById('speed-bingo-checks');
+    if (speedWrap) speedWrap.innerHTML = '<div class="mission-check-wrap">' + missionBingoChecksHtml(9) + '</div>';
+  }
+
+  // ---------- 룰렛 ----------
+  function renderRouletteTeamSelect() {
+    const sel = document.getElementById('roulette-team-select');
+    const ids = Object.keys(teamsData).sort();
+    sel.innerHTML = ids.map(id => `<option value="${id}">${esc(teamsData[id].name || id)}</option>`).join('');
+  }
+  function startRoulette() {
+    const teamId = document.getElementById('roulette-team-select').value;
+    if (!teamId) return alert('조를 먼저 추가해주세요.');
+    const t = teamsData[teamId];
+    let pool = (t.pool && t.pool.length) ? t.pool.slice() : (t.members || []).slice();
+    if (pool.length === 0) return alert('이 조에는 아직 조원이 없어요.');
+    const idx = Math.floor(Math.random() * pool.length);
+    const winner = pool[idx];
+    const newPool = pool.slice(); newPool.splice(idx, 1);
+
+    setScreen('roulette', { teamId, phase:'spinning' });
+    setTimeout(() => {
+      setScreen('roulette', { teamId, phase:'result', resultName: winner });
+      db.ref('teams/' + teamId + '/pool').set(newPool);
+      document.getElementById('roulette-result-card').style.display = 'block';
+      document.getElementById('roulette-result-text').textContent = (t.name || teamId) + ' → ' + winner;
+    }, 2500);
+  }
+
+  // ---------- OX퀴즈 ----------
+  function publishOxQuestion() {
+    const question = document.getElementById('ox-question').value.trim();
+    if (!question) return alert('문제를 입력해주세요.');
+    setScreen('oxquiz', { question, revealed:false });
+  }
+  function revealOxAnswer(answer) {
+    db.ref('game/payload').update({ revealed:true, answer });
+  }
+
+  // ---------- 스피드퀴즈 ----------
+  function renderSpeedTeamSelect() {
+    const sel = document.getElementById('speed-team-select');
+    const ids = Object.keys(teamsData).sort();
+    sel.innerHTML = ids.map(id => `<option value="${id}">${esc(teamsData[id].name || id)}</option>`).join('');
+  }
+  function startSpeedQuiz() {
+    const teamId = document.getElementById('speed-team-select').value;
+    const words = [1,2,3,4].map(n => document.getElementById('speed-word' + n).value.trim()).filter(Boolean);
+    if (!teamId || words.length === 0) return alert('조와 제시어를 입력해주세요.');
+    setScreen('speedquiz', { teamId, words, currentIndex:0 });
+  }
+  function nextSpeedWord() {
+    db.ref('game/payload/currentIndex').transaction(v => (v || 0) + 1);
+  }
+
+  // ---------- 이미지게임 ----------
+  function onImageSelected(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        const maxWidth = 900;
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        selectedImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        const preview = document.getElementById('image-preview');
+        preview.src = selectedImageBase64;
+        preview.style.display = 'block';
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+  function publishImageGame() {
+    const round = Number(document.getElementById('image-round-select').value);
+    if (!selectedImageBase64) return alert('이미지를 먼저 선택해주세요.');
+    setScreen('imagegame', { round, imageData: selectedImageBase64 });
+  }
+  function renderImageWinnerSelect() {
+    const sel = document.getElementById('image-winner-team-select');
+    const ids = Object.keys(teamsData).sort();
+    sel.innerHTML = ids.map(id => `<option value="${id}">${esc(teamsData[id].name || id)}</option>`).join('');
+  }
+  function confirmImageWinner() {
+    const round = Number(document.getElementById('image-round-select').value);
+    const teamId = document.getElementById('image-winner-team-select').value;
+    if (!teamId) return alert('우승 조를 선택해주세요.');
+    const missionId = 10 + round;
+    setBingo(teamId, missionId, true);
+    db.ref('game/payload/winnerTeamName').set(teamsData[teamId].name || teamId);
+  }
+
+  // ---------- 최종 결과 ----------
+  function renderFinalRanking() {
+    const wrap = document.getElementById('final-ranking-list');
+    const ids = Object.keys(teamsData);
+    const ranked = ids.map(id => {
+      const t = teamsData[id];
+      const count = Object.values(t.bingo || {}).filter(Boolean).length;
+      return { id, name: t.name || id, score: count };
+    }).sort((a, b) => b.score - a.score);
+    wrap.innerHTML = ranked.map(r => `<div class="final-row"><span>${esc(r.name)}</span><span>${r.score} / 16</span></div>`).join('');
+    return ranked;
+  }
+  function publishFinal() {
+    const ranked = renderFinalRanking();
+    setScreen('final', { ranking: ranked.map(r => ({ name:r.name, score:r.score })) });
+  }
+
+  // ---------- 실시간 구독 ----------
+  db.ref('teams').on('value', snap => {
+    teamsData = snap.val() || {};
+    renderTeamsList();
+    renderMissionList();
+    renderRouletteTeamSelect();
+    renderSpeedTeamSelect();
+    renderImageWinnerSelect();
+    renderFinalRanking();
+  });
+</script>
+</body>
+</html>
