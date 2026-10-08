@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>레크레이션 컨트롤 화면</title>
+<title>레크레이션 운영자 컨트롤</title>
 <style>
   * { box-sizing:border-box; }
   body { margin:0; background:#f2f4f3; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Apple SD Gothic Neo','Malgun Gothic',sans-serif; color:#1a2420; padding-bottom:40px; }
@@ -107,6 +107,7 @@
   <div class="subtab-bar">
     <button class="subtab-btn active" data-sub="ox" onclick="switchSubtab('ox')">OX퀴즈</button>
     <button class="subtab-btn" data-sub="speed" onclick="switchSubtab('speed')">스피드퀴즈</button>
+    <button class="subtab-btn" data-sub="chosung" onclick="switchSubtab('chosung')">초성퀴즈</button>
     <button class="subtab-btn" data-sub="image" onclick="switchSubtab('image')">이미지게임</button>
   </div>
 
@@ -169,6 +170,7 @@
       <div class="hint">누르면 공개 화면에 제시어 1번 + 60초 타이머가 같이 떠요. 조원이 맞힐 때마다 아래 "다음 단어" 버튼을 눌러서 다음 제시어로 넘기세요. 60초 안에 4개를 다 넘기면 자동으로 성공 처리되고 그 조는 빙고를 받아요. 60초를 넘기면 실패로 끝나요(빙고 없음).</div>
       <div class="row" style="margin-top:8px;">
         <button class="btn" onclick="nextSpeedWord()">다음 단어 →</button>
+        <button class="btn-outline" onclick="openSpeedAdminOverlay()">🔍 확대해서 보기</button>
       </div>
       <div class="mission-actions">
         <div id="speed-bingo-checks"></div>
@@ -176,26 +178,57 @@
     </div>
   </div>
 
+  <div class="subpanel" id="sub-chosung">
+    <div class="card">
+      <div class="card-title">초성·문장퀴즈 (미션 11, 12)</div>
+      <select id="chosung-team-select" onchange="loadChosungForTeam()"></select>
+      <input type="text" id="chosung-r11" placeholder="11번 제시어 (예: ㅇㅈㅁ)" style="margin-top:8px;" onchange="saveChosungPrompts()">
+      <input type="text" id="chosung-r12" placeholder="12번 제시어 (예: 수도 이름을 말하시오!)" style="margin-top:6px;" onchange="saveChosungPrompts()">
+      <div class="hint">조를 바꿔도 자동으로 저장/불러와져요. 조원이 돌아가며 말하는 동안 스톱워치가 0부터 올라가요. <span id="chosung-save-hint" style="color:#0a7a56; font-weight:700; opacity:0; transition:opacity .3s;">✓ 방금 저장됨</span></div>
+      <div class="row" style="margin-top:10px;">
+        <button class="btn-outline" onclick="goChosungIdle()">대기 화면 (설명)</button>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn" onclick="startChosung(11)">▶️ 11번 시작</button>
+        <button class="btn" onclick="startChosung(12)">▶️ 12번 시작</button>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn-outline" onclick="finishChosung()">⏹ 완료 (기록 저장)</button>
+      </div>
+      <div class="hint" id="chosung-status-hint">마지막 조원까지 전부 다른 단어를 말하면 "완료"를 눌러서 기록을 저장하세요.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">결과발표</div>
+      <div class="hint" id="chosung-ready-hint">아직 모든 조의 11,12번 기록이 다 모이지 않았어요.</div>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn" id="chosung-results-btn" onclick="publishChosungResults()" disabled>🏆 결과발표 (화면 송출)</button>
+      </div>
+      <div class="hint">빙고 체크는 여기서 자동으로 되지 않아요 — 결과 보고 "빙고판" 탭의 미션 11, 12 체크박스에서 1·2등을 직접 체크해주세요.</div>
+    </div>
+  </div>
+
   <div class="subpanel" id="sub-image">
     <div class="card">
-      <div class="card-title">이미지게임 (미션 11~16)</div>
-      <select id="image-round-select">
-        <option value="1">1라운드 (미션11)</option>
-        <option value="2">2라운드 (미션12)</option>
-        <option value="3">3라운드 (미션13)</option>
-        <option value="4">4라운드 (미션14)</option>
-        <option value="5">5라운드 (미션15)</option>
-        <option value="6">6라운드 (미션16)</option>
+      <div class="card-title">이미지게임 (미션 13, 14)</div>
+      <select id="image-team-select" onchange="loadImageBankForTeam()"></select>
+      <select id="image-round-select" style="margin-top:8px;" onchange="loadImageBankForTeam()">
+        <option value="13">1라운드 (미션13)</option>
+        <option value="14">2라운드 (미션14)</option>
       </select>
-      <input type="file" accept="image/*" id="image-file-input" style="margin-top:8px;" onchange="onImageSelected(this)">
-      <img id="image-preview" class="img-preview" style="display:none;">
-      <div class="row" style="margin-top:8px;">
-        <button class="btn" onclick="publishImageGame()">화면에 공개</button>
+      <div class="hint">사진을 1번부터 5번까지 순서대로 미리 올려두세요. 조가 하나씩 맞힐 때마다 다음 사진을 공개하고, 5번까지 전부 맞히면 빙고! 중간에 한 번이라도 틀리면 그 라운드는 탈락이에요.</div>
+      <div id="image-slot-wrap" style="margin-top:10px;"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">진행</div>
+      <div class="row">
+        <button class="btn-outline" onclick="goImageIdle2()">대기 화면 (설명)</button>
+        <button class="btn" onclick="startImageRound2()">▶️ 시작 (1번 사진 공개)</button>
       </div>
-      <select id="image-winner-team-select" style="margin-top:10px;"></select>
       <div class="row" style="margin-top:8px;">
-        <button class="btn-outline" onclick="confirmImageWinner()">🏆 우승 조 확정 (빙고 체크)</button>
+        <button class="btn" onclick="imageCorrect()">⭕ 정답! (다음 사진)</button>
+        <button class="btn-danger" onclick="imageWrong()">❌ 오답 (탈락)</button>
       </div>
+      <div class="hint" id="image-progress-hint">아직 시작 안 함.</div>
     </div>
   </div>
 </div>
@@ -211,6 +244,19 @@
   </div>
 </div>
 
+<!-- 스피드퀴즈 운영자용 확대 화면: 조원이 다같이 보고, 운영자는 이 화면으로 다음 단어를 바로 누름 -->
+<div id="speed-admin-overlay" style="display:none; position:fixed; inset:0; background:#0a7a56; color:#fff; z-index:999; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center;">
+  <div id="speed-admin-team" style="font-size:16px; opacity:0.85; margin-bottom:6px; font-weight:700;"></div>
+  <div id="speed-admin-progress" style="font-size:13px; opacity:0.7; margin-bottom:6px;"></div>
+  <div id="speed-admin-word" style="font-size:40px; font-weight:900; margin:8px 0; word-break:keep-all;"></div>
+  <div id="speed-admin-timer" style="font-size:58px; font-weight:900; color:#ffd34d; margin:10px 0;"></div>
+  <div id="speed-admin-result" style="font-size:20px; font-weight:800; margin:6px 0;"></div>
+  <div class="row" style="margin-top:20px; max-width:320px;">
+    <button class="btn" style="background:#fff; color:#0a7a56; padding:16px 20px; font-size:17px;" onclick="nextSpeedWordFromOverlay()">다음 단어 →</button>
+    <button class="btn-outline" style="background:transparent; color:#fff; border-color:#fff; padding:16px 16px; font-size:14px;" onclick="closeSpeedAdminOverlay()">닫기</button>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -221,8 +267,8 @@
     5:{title:'"떡잎마을방범대" 글자 찾기'}, 6:{title:'우리 조원 이름 맞히기'},
     7:{title:'즉석 OX 퀴즈 서바이벌'}, 8:{title:'절대음감'},
     9:{title:'스피드퀴즈'}, 10:{title:'3·2쿵쿵따'},
-    11:{title:'이미지게임 1라운드'}, 12:{title:'이미지게임 2라운드'},
-    13:{title:'이미지게임 3라운드'}, 14:{title:'이미지게임 4라운드'},
+    11:{title:'초성퀴즈'}, 12:{title:'문장퀴즈'},
+    13:{title:'이미지게임 1라운드'}, 14:{title:'이미지게임 2라운드'},
     15:{title:'이미지게임 5라운드'}, 16:{title:'이미지게임 6라운드'}
   };
 
@@ -464,8 +510,6 @@
   function revealOxBankAnswer() {
     if (!currentOxRoundId || !currentOxQid) return alert('먼저 문제를 출제해주세요.');
     const correct = oxBankData[currentOxQid] && oxBankData[currentOxQid].answer;
-    // 탈락 처리를 먼저 끝내고(DB에 다 써진 뒤) "정답 공개" 화면을 내보내야
-    // 뷰어가 정답 화면에서 본인 생존/탈락 여부를 정확하게 읽을 수 있음(순서가 바뀌면 타이밍 꼬임)
     computeOxElimination(currentOxRoundId, currentOxQid, correct, currentOxRevival).then(() => {
       db.ref('game/payload').update({ mode:'revealed', answer: correct });
     });
@@ -484,11 +528,10 @@
         const isOut = !!alreadyOut[cid];
         const v = votes[cid];
         if (revival) {
-          if (!isOut) return; // 원래 생존자는 패자부활전 결과와 무관(구경만 함)
-          if (v && v.choice === correct) updates[cid] = null; // 맞히면 부활(탈락 기록 삭제)
-          // 틀리거나 무응답이면 그대로 탈락 유지
+          if (!isOut) return;
+          if (v && v.choice === correct) updates[cid] = null;
         } else {
-          if (isOut) return; // 이미 탈락한 사람은 그대로 구경 모드
+          if (isOut) return;
           if (!v || v.choice !== correct) updates[cid] = true;
         }
       });
@@ -498,7 +541,6 @@
     });
   }
 
-  // 참가 현황: 조별 입장 인원/정원 + 생존·탈락 실시간 표시
   function attachOxRosterListeners(roundId) {
     detachOxRosterListeners();
     if (!roundId) return;
@@ -555,12 +597,11 @@
     loadSpeedWordsForTeam();
   }
   function speedWordInputFocused() {
-    // 제시어 입력칸 중 하나라도 지금 타이핑 중이면 true
     const active = document.activeElement;
     return !!(active && active.id && active.id.indexOf('speed-word') === 0);
   }
   function loadSpeedWordsForTeam() {
-    if (speedWordInputFocused()) return; // 타이핑 중엔 서버 값으로 덮어쓰지 않음
+    if (speedWordInputFocused()) return;
     const teamId = document.getElementById('speed-team-select').value;
     const words = (speedQuizBank[teamId] && speedQuizBank[teamId].words) || [];
     for (let i = 0; i < 4; i++) {
@@ -583,11 +624,15 @@
     currentSpeedTeamId = null;
     currentSpeedWords = [];
     currentSpeedDeadline = null;
+    currentSpeedIndex = 0;
+    closeSpeedAdminOverlay();
     setScreen('speedquiz', { mode:'idle' });
   }
   let currentSpeedTeamId = null;
   let currentSpeedWords = [];
   let currentSpeedDeadline = null;
+  let currentSpeedIndex = 0;
+  let speedAdminTimer = null;
 
   function startSpeedQuiz() {
     const teamId = document.getElementById('speed-team-select').value;
@@ -597,30 +642,210 @@
     currentSpeedTeamId = teamId;
     currentSpeedWords = words;
     currentSpeedDeadline = Date.now() + 60000;
+    currentSpeedIndex = 0;
     setScreen('speedquiz', { teamId, words, currentIndex:0, total: words.length, deadline: currentSpeedDeadline, result:null });
+    openSpeedAdminOverlay();
   }
   function nextSpeedWord() {
     if (!currentSpeedTeamId) return alert('먼저 "시작"을 눌러서 조를 진행시켜주세요.');
     db.ref('game/payload/currentIndex').transaction(v => (v || 0) + 1).then(res => {
       const newIndex = res.snapshot.val();
+      currentSpeedIndex = newIndex;
       if (newIndex >= currentSpeedWords.length) {
         const success = Date.now() <= currentSpeedDeadline;
         db.ref('game/payload/result').set(success ? 'success' : 'fail');
         if (success) {
           setBingo(currentSpeedTeamId, 9, true);
         }
+        renderSpeedAdminOverlayResult(success);
+      } else {
+        renderSpeedAdminOverlay();
       }
     });
   }
+  function nextSpeedWordFromOverlay() {
+    nextSpeedWord();
+  }
+  function openSpeedAdminOverlay() {
+    if (!currentSpeedTeamId) return alert('먼저 "시작"을 눌러주세요.');
+    renderSpeedAdminOverlay();
+    document.getElementById('speed-admin-overlay').style.display = 'flex';
+    if (speedAdminTimer) clearInterval(speedAdminTimer);
+    speedAdminTimer = setInterval(renderSpeedAdminOverlay, 200);
+  }
+  function closeSpeedAdminOverlay() {
+    const el = document.getElementById('speed-admin-overlay');
+    if (el) el.style.display = 'none';
+    if (speedAdminTimer) { clearInterval(speedAdminTimer); speedAdminTimer = null; }
+  }
+  function renderSpeedAdminOverlay() {
+    const team = teamsData[currentSpeedTeamId] || {};
+    const total = currentSpeedWords.length;
+    document.getElementById('speed-admin-team').textContent = team.name || currentSpeedTeamId || '';
+    document.getElementById('speed-admin-result').textContent = '';
+    if (currentSpeedIndex >= total) { return; }
+    document.getElementById('speed-admin-progress').textContent = (currentSpeedIndex + 1) + ' / ' + total;
+    document.getElementById('speed-admin-word').textContent = currentSpeedWords[currentSpeedIndex] || '';
+    const remain = Math.max(0, currentSpeedDeadline - Date.now());
+    document.getElementById('speed-admin-timer').textContent = Math.ceil(remain / 1000);
+  }
+  function renderSpeedAdminOverlayResult(success) {
+    if (speedAdminTimer) { clearInterval(speedAdminTimer); speedAdminTimer = null; }
+    document.getElementById('speed-admin-progress').textContent = '';
+    document.getElementById('speed-admin-word').textContent = '';
+    document.getElementById('speed-admin-timer').textContent = success ? '🎉' : '⏰';
+    document.getElementById('speed-admin-result').textContent = success ? '성공! 빙고 획득' : '시간 종료 (실패)';
+    document.getElementById('speed-admin-overlay').style.display = 'flex';
+  }
 
-  // ---------- 이미지게임 ----------
-  function onImageSelected(input) {
+  // ---------- 초성·문장퀴즈 (미션 11, 12) ----------
+  let chosungBankData = {};
+  let chosungResultsData = {};
+  let currentChosungTeamId = null;
+  let currentChosungRound = null;
+  let currentChosungStartTime = null;
+
+  function renderChosungTeamSelect() {
+    const sel = document.getElementById('chosung-team-select');
+    if (!sel) return;
+    const prev = sel.value;
+    const ids = Object.keys(teamsData).sort();
+    sel.innerHTML = ids.map(id => `<option value="${id}">${esc(teamsData[id].name || id)}</option>`).join('');
+    if (ids.includes(prev)) sel.value = prev;
+    loadChosungForTeam();
+  }
+  function chosungInputFocused() {
+    const active = document.activeElement;
+    return !!(active && active.id && active.id.indexOf('chosung-r1') === 0);
+  }
+  function loadChosungForTeam() {
+    if (chosungInputFocused()) return;
+    const teamId = document.getElementById('chosung-team-select').value;
+    const data = chosungBankData[teamId] || {};
+    document.getElementById('chosung-r11').value = data.r11 || '';
+    document.getElementById('chosung-r12').value = data.r12 || '';
+  }
+  function saveChosungPrompts() {
+    const teamId = document.getElementById('chosung-team-select').value;
+    if (!teamId) return;
+    const r11 = document.getElementById('chosung-r11').value.trim();
+    const r12 = document.getElementById('chosung-r12').value.trim();
+    db.ref('chosungBank/' + teamId).set({ r11, r12 }).then(() => {
+      const hint = document.getElementById('chosung-save-hint');
+      if (!hint) return;
+      hint.style.opacity = '1';
+      clearTimeout(saveChosungPrompts._t);
+      saveChosungPrompts._t = setTimeout(() => { hint.style.opacity = '0'; }, 1200);
+    });
+  }
+  function goChosungIdle() {
+    currentChosungTeamId = null;
+    currentChosungRound = null;
+    currentChosungStartTime = null;
+    setScreen('chosung', { mode:'idle' });
+    document.getElementById('chosung-status-hint').textContent = '마지막 조원까지 전부 다른 단어를 말하면 "완료"를 눌러서 기록을 저장하세요.';
+  }
+  function startChosung(round) {
+    const teamId = document.getElementById('chosung-team-select').value;
+    if (!teamId) return alert('조를 선택해주세요.');
+    const data = chosungBankData[teamId] || {};
+    const prompt = (round === 11 ? data.r11 : data.r12) || '';
+    if (!prompt) return alert((round === 11 ? '11번' : '12번') + ' 제시어를 먼저 입력해주세요.');
+    currentChosungTeamId = teamId;
+    currentChosungRound = round;
+    currentChosungStartTime = Date.now();
+    setScreen('chosung', { teamId, round, prompt, startTime: currentChosungStartTime, mode:'running' });
+    document.getElementById('chosung-status-hint').textContent = '⏱ 진행중! 마지막 조원이 맞히면 "완료"를 눌러주세요.';
+  }
+  function finishChosung() {
+    if (!currentChosungTeamId || !currentChosungRound) return alert('먼저 11번 또는 12번을 시작해주세요.');
+    const elapsed = Date.now() - currentChosungStartTime;
+    db.ref('chosungResults/' + currentChosungRound + '/' + currentChosungTeamId).set(elapsed);
+    setScreen('chosung', { teamId: currentChosungTeamId, round: currentChosungRound, mode:'stopped', elapsed });
+    document.getElementById('chosung-status-hint').textContent = '기록 저장 완료! (' + (elapsed / 1000).toFixed(1) + '초) 다음 라운드를 시작하거나 대기 화면으로 넘어가세요.';
+    currentChosungTeamId = null;
+    currentChosungRound = null;
+    currentChosungStartTime = null;
+  }
+  function checkChosungResultsReady() {
+    const btn = document.getElementById('chosung-results-btn');
+    const hint = document.getElementById('chosung-ready-hint');
+    if (!btn || !hint) return;
+    const teamIds = Object.keys(teamsData);
+    const r11 = chosungResultsData['11'] || {};
+    const r12 = chosungResultsData['12'] || {};
+    const missing = teamIds.filter(id => !(id in r11) || !(id in r12));
+    if (teamIds.length > 0 && missing.length === 0) {
+      btn.disabled = false;
+      hint.textContent = '모든 조의 기록이 모였어요! 결과발표를 눌러주세요.';
+    } else {
+      btn.disabled = true;
+      const names = missing.map(id => (teamsData[id] && teamsData[id].name) || id).join(', ');
+      hint.textContent = teamIds.length === 0 ? '아직 조가 없어요.' : ('아직 기록이 없는 조: ' + names);
+    }
+  }
+  function publishChosungResults() {
+    const r11 = chosungResultsData['11'] || {};
+    const r12 = chosungResultsData['12'] || {};
+    const build = (obj) => Object.keys(obj).map(id => ({
+      name: (teamsData[id] && teamsData[id].name) || id,
+      elapsed: obj[id]
+    })).sort((a, b) => a.elapsed - b.elapsed);
+    setScreen('chosungResults', { r11: build(r11), r12: build(r12) });
+  }
+
+  // ---------- 이미지게임 (미션 13, 14) ----------
+  let imageBankData = {};
+  let currentImageTeamId = null;
+  let currentImageMissionId = null;
+  let currentImageList = [];
+  let currentImageIndex = 0;
+
+  function renderImageTeamSelect() {
+    const sel = document.getElementById('image-team-select');
+    if (!sel) return;
+    const prev = sel.value;
+    const ids = Object.keys(teamsData).sort();
+    sel.innerHTML = ids.map(id => `<option value="${id}">${esc(teamsData[id].name || id)}</option>`).join('');
+    if (ids.includes(prev)) sel.value = prev;
+    loadImageBankForTeam();
+  }
+  function renderImageSlots() {
+    const wrap = document.getElementById('image-slot-wrap');
+    if (!wrap) return;
+    let html = '';
+    for (let i = 1; i <= 5; i++) {
+      html += `<div class="row" style="margin-top:8px; align-items:flex-start;">
+        <div style="flex:1;">
+          <div class="hint" style="margin-top:0;">${i}번 사진</div>
+          <input type="file" accept="image/*" onchange="onTeamImageSelected(this, ${i})">
+        </div>
+        <img id="image-slot-preview-${i}" class="img-preview" style="display:none; max-width:70px; max-height:70px; margin-top:0;">
+      </div>`;
+    }
+    wrap.innerHTML = html;
+  }
+  function loadImageBankForTeam() {
+    const teamId = document.getElementById('image-team-select').value;
+    const missionId = document.getElementById('image-round-select').value;
+    const data = (imageBankData[teamId] && imageBankData[teamId][missionId]) || {};
+    for (let i = 1; i <= 5; i++) {
+      const img = document.getElementById('image-slot-preview-' + i);
+      if (!img) continue;
+      if (data[i]) { img.src = data[i]; img.style.display = 'block'; }
+      else { img.src = ''; img.style.display = 'none'; }
+    }
+  }
+  function onTeamImageSelected(input, slotIndex) {
     const file = input.files[0];
     if (!file) return;
+    const teamId = document.getElementById('image-team-select').value;
+    const missionId = document.getElementById('image-round-select').value;
+    if (!teamId) return alert('조를 먼저 선택해주세요.');
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function (e) {
       const img = new Image();
-      img.onload = function() {
+      img.onload = function () {
         const maxWidth = 900;
         const scale = Math.min(1, maxWidth / img.width);
         const canvas = document.createElement('canvas');
@@ -628,32 +853,59 @@
         canvas.height = img.height * scale;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        selectedImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
-        const preview = document.getElementById('image-preview');
-        preview.src = selectedImageBase64;
-        preview.style.display = 'block';
+        const base64 = canvas.toDataURL('image/jpeg', 0.7);
+        db.ref('imageBank/' + teamId + '/' + missionId + '/' + slotIndex).set(base64).then(() => {
+          const preview = document.getElementById('image-slot-preview-' + slotIndex);
+          if (preview) { preview.src = base64; preview.style.display = 'block'; }
+        });
       };
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
   }
-  function publishImageGame() {
-    const round = Number(document.getElementById('image-round-select').value);
-    if (!selectedImageBase64) return alert('이미지를 먼저 선택해주세요.');
-    setScreen('imagegame', { round, imageData: selectedImageBase64 });
+  function goImageIdle2() {
+    currentImageTeamId = null;
+    currentImageMissionId = null;
+    currentImageList = [];
+    currentImageIndex = 0;
+    setScreen('imageround2', { mode:'idle' });
+    document.getElementById('image-progress-hint').textContent = '아직 시작 안 함.';
   }
-  function renderImageWinnerSelect() {
-    const sel = document.getElementById('image-winner-team-select');
-    const ids = Object.keys(teamsData).sort();
-    sel.innerHTML = ids.map(id => `<option value="${id}">${esc(teamsData[id].name || id)}</option>`).join('');
+  function startImageRound2() {
+    const teamId = document.getElementById('image-team-select').value;
+    const missionId = document.getElementById('image-round-select').value;
+    if (!teamId) return alert('조를 선택해주세요.');
+    const data = (imageBankData[teamId] && imageBankData[teamId][missionId]) || {};
+    const list = [1,2,3,4,5].map(i => data[i]).filter(Boolean);
+    if (list.length === 0) return alert('먼저 사진을 1장 이상 올려주세요.');
+    currentImageTeamId = teamId;
+    currentImageMissionId = missionId;
+    currentImageList = list;
+    currentImageIndex = 0;
+    setScreen('imageround2', { teamId, missionId, currentIndex:0, total: list.length, imageData: list[0], status:'playing' });
+    document.getElementById('image-progress-hint').textContent = '진행중: 1 / ' + list.length;
   }
-  function confirmImageWinner() {
-    const round = Number(document.getElementById('image-round-select').value);
-    const teamId = document.getElementById('image-winner-team-select').value;
-    if (!teamId) return alert('우승 조를 선택해주세요.');
-    const missionId = 10 + round; // 1라운드→미션11 ... 6라운드→미션16
-    setBingo(teamId, missionId, true);
-    db.ref('game/payload/winnerTeamName').set(teamsData[teamId].name || teamId);
+  function imageCorrect() {
+    if (!currentImageTeamId) return alert('먼저 "시작"을 눌러주세요.');
+    const nextIndex = currentImageIndex + 1;
+    if (nextIndex >= currentImageList.length) {
+      setBingo(currentImageTeamId, Number(currentImageMissionId), true);
+      db.ref('game/payload').update({ status:'success' });
+      document.getElementById('image-progress-hint').textContent = '🎉 5장 전부 성공! 빙고 획득!';
+      currentImageTeamId = null;
+      currentImageMissionId = null;
+    } else {
+      currentImageIndex = nextIndex;
+      db.ref('game/payload').update({ currentIndex: currentImageIndex, imageData: currentImageList[currentImageIndex] });
+      document.getElementById('image-progress-hint').textContent = '진행중: ' + (currentImageIndex + 1) + ' / ' + currentImageList.length;
+    }
+  }
+  function imageWrong() {
+    if (!currentImageTeamId) return alert('먼저 "시작"을 눌러주세요.');
+    db.ref('game/payload').update({ status:'fail' });
+    document.getElementById('image-progress-hint').textContent = '❌ 탈락 처리됨. 다음 조로 넘어가세요.';
+    currentImageTeamId = null;
+    currentImageMissionId = null;
   }
 
   // ---------- 최종 결과 ----------
@@ -674,15 +926,18 @@
   }
 
   // ---------- 실시간 구독 ----------
+  renderImageSlots();
   db.ref('teams').on('value', snap => {
     teamsData = snap.val() || {};
     renderTeamsList();
     renderMissionList();
     renderBingoShuffleList();
     renderSpeedTeamSelect();
-    renderImageWinnerSelect();
+    renderChosungTeamSelect();
+    renderImageTeamSelect();
     renderFinalRanking();
     renderOxRosterLive(currentOxRoundId);
+    checkChosungResultsReady();
   });
   db.ref('oxBank').on('value', snap => {
     oxBankData = snap.val() || {};
@@ -691,6 +946,18 @@
   db.ref('speedQuizBank').on('value', snap => {
     speedQuizBank = snap.val() || {};
     loadSpeedWordsForTeam();
+  });
+  db.ref('chosungBank').on('value', snap => {
+    chosungBankData = snap.val() || {};
+    loadChosungForTeam();
+  });
+  db.ref('chosungResults').on('value', snap => {
+    chosungResultsData = snap.val() || {};
+    checkChosungResultsReady();
+  });
+  db.ref('imageBank').on('value', snap => {
+    imageBankData = snap.val() || {};
+    loadImageBankForTeam();
   });
 </script>
 </body>
