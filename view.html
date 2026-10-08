@@ -29,11 +29,11 @@
   .mini-cell.done { background:#ffd34d; color:#5c4400; }
   .team-score { font-size:11px; color:rgba(255,255,255,0.7); margin-top:6px; }
 
-  .roulette-team { font-size:15px; font-weight:700; color:rgba(255,255,255,0.8); margin-bottom:10px; }
-  .roulette-display { font-size:40px; font-weight:900; min-height:56px; letter-spacing:1px; }
-  .roulette-display.result { color:#ffd34d; animation:pop .35s ease; }
-  @keyframes pop { 0%{ transform:scale(0.7); } 60%{ transform:scale(1.12); } 100%{ transform:scale(1); } }
-  .roulette-hint { margin-top:14px; font-size:13px; color:rgba(255,255,255,0.65); }
+  .roulette-team { font-size:15px; font-weight:700; color:rgba(255,255,255,0.8); margin-bottom:14px; }
+  .wheel-wrap { position:relative; }
+  .wheel-pointer { position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:30px; color:#ffd34d; z-index:2; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.4)); }
+  #wheel-svg { display:block; margin:0 auto; width:280px; height:280px; border-radius:50%; filter:drop-shadow(0 10px 24px rgba(0,0,0,0.35)); }
+  .roulette-result-name { margin-top:18px; font-size:24px; font-weight:900; color:#ffd34d; min-height:32px; transition:opacity .3s ease; }
 
   .ox-question { font-size:24px; font-weight:800; max-width:560px; line-height:1.5; margin-bottom:20px; }
   .ox-answer { font-size:70px; font-weight:900; }
@@ -88,10 +88,19 @@
   };
 
   const app = document.getElementById('app');
-  let rouletteTimer = null;
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function polarToCartesian(cx, cy, r, angleDeg) {
+    const rad = (angleDeg - 90) * Math.PI / 180;
+    return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+  }
+
+  function truncateName(s) {
+    s = String(s || '');
+    return s.length > 5 ? s.slice(0, 5) + '…' : s;
   }
 
   function renderWaiting() {
@@ -138,23 +147,55 @@
 
   function renderRoulette(payload, teams) {
     const team = (teams && teams[payload.teamId]) || {};
-    const members = team.members || [];
+    const pool = (payload.pool && payload.pool.length) ? payload.pool : (team.members || ['...']);
+    const n = pool.length;
+    const segAngle = 360 / n;
+    const colors = ['#ff6b6b','#ffa94d','#ffd43b','#69db7c','#4dabf7','#9775fa','#f783ac','#63e6be'];
+
+    let paths = '';
+    let labels = '';
+    for (let i = 0; i < n; i++) {
+      const startAngle = i * segAngle;
+      const endAngle = (i + 1) * segAngle;
+      const [x1, y1] = polarToCartesian(150, 150, 140, startAngle);
+      const [x2, y2] = polarToCartesian(150, 150, 140, endAngle);
+      const largeArc = segAngle > 180 ? 1 : 0;
+      paths += `<path d="M150,150 L${x1.toFixed(2)},${y1.toFixed(2)} A140,140 0 ${largeArc} 1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${colors[i % colors.length]}" stroke="#fff" stroke-width="2"/>`;
+      const midAngle = startAngle + segAngle / 2;
+      const [tx, ty] = polarToCartesian(150, 150, 95, midAngle);
+      labels += `<text x="${tx.toFixed(2)}" y="${ty.toFixed(2)}" fill="#1a2420" font-size="13" font-weight="700" text-anchor="middle" dominant-baseline="middle" transform="rotate(${midAngle.toFixed(2)},${tx.toFixed(2)},${ty.toFixed(2)})">${esc(truncateName(pool[i]))}</text>`;
+    }
+
+    const winnerIndex = Math.max(0, Math.min(n - 1, payload.winnerIndex || 0));
+    const winnerMidAngle = winnerIndex * segAngle + segAngle / 2;
+    const spins = 5;
+    const targetRotation = spins * 360 + (360 - winnerMidAngle);
+
     app.innerHTML = `
       <div class="roulette-team">${esc(team.name || '')} 대표 뽑는 중</div>
-      <div class="roulette-display" id="roulette-text">-</div>
-      <div class="roulette-hint">${payload.phase === 'result' ? '🎉 당첨!' : '두구두구두구...'}</div>`;
-    const textEl = document.getElementById('roulette-text');
-    if (rouletteTimer) { clearInterval(rouletteTimer); rouletteTimer = null; }
-    if (payload.phase === 'spinning') {
-      const pool = members.length ? members : ['...'];
-      rouletteTimer = setInterval(() => {
-        const r = pool[Math.floor(Math.random() * pool.length)];
-        textEl.textContent = r;
-      }, 80);
-    } else if (payload.phase === 'result') {
-      textEl.textContent = payload.resultName || '';
-      textEl.classList.add('result');
-    }
+      <div class="wheel-wrap">
+        <div class="wheel-pointer">▼</div>
+        <svg id="wheel-svg" viewBox="0 0 300 300"><g>${paths}${labels}</g></svg>
+      </div>
+      <div class="roulette-result-name" id="roulette-winner-name" style="opacity:0;"></div>`;
+
+    const svg = document.getElementById('wheel-svg');
+    svg.style.transition = 'none';
+    svg.style.transform = 'rotate(0deg)';
+    void svg.offsetWidth; // 강제 리플로우 - 애니메이션 리셋용
+    svg.style.transition = 'transform 3.5s cubic-bezier(0.17,0.67,0.12,0.99)';
+    requestAnimationFrame(() => {
+      svg.style.transform = `rotate(${targetRotation}deg)`;
+    });
+
+    svg.addEventListener('transitionend', function handler() {
+      svg.removeEventListener('transitionend', handler);
+      const nameEl = document.getElementById('roulette-winner-name');
+      if (nameEl) {
+        nameEl.textContent = '🎉 ' + (payload.resultName || '') + ' 당첨!';
+        nameEl.style.opacity = '1';
+      }
+    });
   }
 
   function renderOxQuiz(payload) {
@@ -204,7 +245,6 @@
   function render(game, teams) {
     const screen = (game && game.screen) || 'waiting';
     const payload = (game && game.payload) || {};
-    if (screen !== 'roulette' && rouletteTimer) { clearInterval(rouletteTimer); rouletteTimer = null; }
     if (screen === 'waiting') renderWaiting();
     else if (screen === 'missionIntro') renderMissionIntro(payload);
     else if (screen === 'bingoBoard') renderBingoBoard(teams);
