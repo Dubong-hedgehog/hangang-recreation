@@ -411,20 +411,20 @@
           if (!wasOut) {
             badge = `<div class="ox-result-badge" style="background:rgba(255,255,255,0.25); color:#fff;">👀 패자부활전 구경 중</div>`;
           } else if (!nowOut) {
-            badge = `<div class="ox-result-badge survive">🎉 부활 성공!</div>`;
+            badge = `<div class="ox-result-badge survive">🎉부활 성공!🎉</div>`;
             playDing();
           } else {
-            badge = `<div class="ox-result-badge out">😢 부활 실패 — 계속 구경</div>`;
+            badge = `<div class="ox-result-badge out">😭부활 실패😭</div>`;
             playBuzz();
           }
         } else {
           if (wasOut) {
             badge = `<div class="ox-result-badge out">계속 구경 모드</div>`;
           } else if (nowOut) {
-            badge = `<div class="ox-result-badge out">😭 탈락!</div>`;
+            badge = `<div class="ox-result-badge out">😭탈락!😭 끝까지 함께 해주세요!!</div>`;
             playBuzz();
           } else {
-            badge = `<div class="ox-result-badge survive">🎉 생존!</div>`;
+            badge = `<div class="ox-result-badge survive">🎉정답!🎉</div>`;
             playDing();
           }
         }
