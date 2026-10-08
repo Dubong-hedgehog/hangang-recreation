@@ -59,6 +59,12 @@
   .join-form button { width:100%; margin-top:12px; background:#ffd34d; color:#5c4400; border:none; border-radius:10px; padding:11px; font-size:15px; font-weight:800; }
   .join-form label { font-size:12px; color:rgba(255,255,255,0.7); }
 
+  .ox-roster-wrap { width:100%; max-width:480px; margin-top:22px; text-align:left; }
+  .ox-roster-team { background:rgba(255,255,255,0.1); border-radius:12px; padding:10px 14px; margin-bottom:8px; }
+  .ox-roster-team-name { font-weight:800; font-size:13px; margin-bottom:4px; }
+  .ox-roster-cap { font-weight:600; opacity:0.7; }
+  .ox-roster-names { font-size:12px; line-height:1.6; color:rgba(255,255,255,0.85); }
+
   .speed-team { font-size:14px; font-weight:700; color:rgba(255,255,255,0.75); margin-bottom:8px; }
   .speed-big { font-size:40px; font-weight:900; margin:14px 0; }
   .speed-idx { font-size:13px; color:rgba(255,255,255,0.6); }
@@ -297,6 +303,54 @@
   let oxWasEliminatedAtQuestionStart = null;
   let oxWasEliminatedQid = null;
 
+  // 대기 화면에서도 조별로 누가 남았는지 실시간으로 보여주기 위한 구독
+  let oxIdleRosterRef1 = null;
+  let oxIdleRosterRef2 = null;
+  function attachOxIdleRoster(roundId) {
+    detachOxIdleRoster();
+    if (!roundId) return;
+    const update = () => renderOxIdleRosterBox(roundId);
+    oxIdleRosterRef1 = db.ref('oxRounds/' + roundId + '/participants');
+    oxIdleRosterRef2 = db.ref('oxRounds/' + roundId + '/eliminated');
+    oxIdleRosterRef1.on('value', update);
+    oxIdleRosterRef2.on('value', update);
+  }
+  function detachOxIdleRoster() {
+    if (oxIdleRosterRef1) { oxIdleRosterRef1.off(); oxIdleRosterRef1 = null; }
+    if (oxIdleRosterRef2) { oxIdleRosterRef2.off(); oxIdleRosterRef2 = null; }
+  }
+  function renderOxIdleRosterBox(roundId) {
+    const wrap = document.getElementById('ox-idle-roster');
+    if (!wrap) return;
+    Promise.all([
+      db.ref('oxRounds/' + roundId + '/participants').once('value'),
+      db.ref('oxRounds/' + roundId + '/eliminated').once('value')
+    ]).then(([pSnap, eSnap]) => {
+      const participants = pSnap.val() || {};
+      const eliminated = eSnap.val() || {};
+      const byTeam = {};
+      Object.keys(participants).forEach(cid => {
+        const p = participants[cid];
+        if (!byTeam[p.team]) byTeam[p.team] = [];
+        byTeam[p.team].push({ name: p.name, out: !!eliminated[cid] });
+      });
+      const teamIds = Object.keys(latestTeams || {}).sort();
+      if (teamIds.length === 0) { wrap.innerHTML = ''; return; }
+      wrap.innerHTML = teamIds.map(tid => {
+        const t = latestTeams[tid];
+        const list = byTeam[tid] || [];
+        const aliveCount = list.filter(p => !p.out).length;
+        const names = list.length
+          ? list.map(p => p.out ? `<span style="text-decoration:line-through; opacity:0.5;">${esc(p.name)}</span>` : esc(p.name)).join(', ')
+          : '<span style="opacity:0.6;">아직 입장한 사람 없음</span>';
+        return `<div class="ox-roster-team">
+          <div class="ox-roster-team-name">${esc(t.name || tid)} <span class="ox-roster-cap">(생존 ${aliveCount}명)</span></div>
+          <div class="ox-roster-names">${names}</div>
+        </div>`;
+      }).join('');
+    });
+  }
+
   function renderOxJoinForm(teams) {
     const teamIds = Object.keys(teams || {}).sort();
     const saved = getSavedProfile();
@@ -345,7 +399,9 @@
       app.innerHTML = `
         <div class="mission-badge">OX 퀴즈 서바이벌</div>
         <div class="mission-title">문제를 틀리면 즉시 탈락!</div>
-        <div class="mission-desc">문제가 뜨면 10초 안에 O 또는 X를 선택하세요.<br>10초 안이면 몇 번이든 바꿀 수 있어요.<br>마지막까지 살아남은 사람이 속한 조가 승리해요!</div>`;
+        <div class="mission-desc">문제가 뜨면 10초 안에 O 또는 X를 선택하세요.<br>10초 안이면 몇 번이든 바꿀 수 있어요.<br>마지막까지 살아남은 사람이 속한 조가 승리해요!</div>
+        <div class="ox-roster-wrap" id="ox-idle-roster"></div>`;
+      attachOxIdleRoster(payload.roundId);
       return;
     }
 
@@ -409,7 +465,7 @@
         let badge;
         if (payload.revival) {
           if (!wasOut) {
-            badge = `<div class="ox-result-badge" style="background:rgba(255,255,255,0.25); color:#fff;">👀 패자부활전 구경 중</div>`;
+            badge = `<div class="ox-result-badge" style="background:rgba(255,255,255,0.25); color:#fff;">👏부활에 성공한 조원에게 박수!👏 </div>`;
           } else if (!nowOut) {
             badge = `<div class="ox-result-badge survive">🎉부활 성공!🎉</div>`;
             playDing();
@@ -419,7 +475,7 @@
           }
         } else {
           if (wasOut) {
-            badge = `<div class="ox-result-badge out">계속 구경 모드</div>`;
+            badge = `<div class="ox-result-badge out">계속 함께 해주세요!</div>`;
           } else if (nowOut) {
             badge = `<div class="ox-result-badge out">😭탈락!😭 끝까지 함께 해주세요!!</div>`;
             playBuzz();
@@ -497,6 +553,8 @@
     const payload = (game && game.payload) || {};
     if (screen !== 'bingoShuffle' && shuffleTimer) { clearTimeout(shuffleTimer); clearInterval(shuffleTimer); shuffleTimer = null; }
     if (screen !== 'oxquiz' && oxCountdownTimer) { clearInterval(oxCountdownTimer); oxCountdownTimer = null; }
+    // 대기 화면이 아닌 다른 화면으로 넘어가면 구독 해제(화면이 idle일 때만 attachOxIdleRoster가 다시 붙여줌)
+    if (!(screen === 'oxquiz' && payload.mode === 'idle')) detachOxIdleRoster();
     if (screen === 'waiting') renderWaiting();
     else if (screen === 'missionIntro') renderMissionIntro(payload);
     else if (screen === 'bingoBoard') renderBingoBoard(teams);
