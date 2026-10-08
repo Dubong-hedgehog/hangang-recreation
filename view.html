@@ -398,7 +398,7 @@
     if (payload.mode === 'idle' || !payload.mode) {
       app.innerHTML = `
         <div class="mission-badge">OX 퀴즈 서바이벌</div>
-        <div class="mission-title">문제를 틀리면 즉시 탈락!</div>
+        <div class="mission-title">문제 틀리면 즉시 탈락입니다!</div>
         <div class="mission-desc">문제가 뜨면 10초 안에 O 또는 X를 선택하세요.<br>10초 안이면 몇 번이든 바꿀 수 있어요.<br>마지막까지 살아남은 사람이 속한 조가 승리해요!</div>
         <div class="ox-roster-wrap" id="ox-idle-roster"></div>`;
       attachOxIdleRoster(payload.roundId);
@@ -413,7 +413,7 @@
       if (!canPlay) {
         const msg = isRevival
           ? `<div class="ox-spectator">🏆 생존자는 이번 패자부활전을 구경해요!</div>`
-          : `<div class="ox-spectator">😢 이미 탈락했어요 — 구경 모드</div>`;
+          : `<div class="ox-spectator">😢탈락했어요😢 살아남은 조원을 도와주세요!</div>`;
         app.innerHTML = `
           <div class="mission-badge">${isRevival ? '⚡ 패자부활전' : 'OX 퀴즈'}</div>
           <div class="ox-question">${esc(payload.question || '')}</div>
@@ -477,7 +477,7 @@
           if (wasOut) {
             badge = `<div class="ox-result-badge out">계속 함께 해주세요!</div>`;
           } else if (nowOut) {
-            badge = `<div class="ox-result-badge out">😭탈락!😭 끝까지 함께 해주세요!!</div>`;
+            badge = `<div class="ox-result-badge out">😭탈락!😭 마지막까지 함께 해주세요!!</div>`;
             playBuzz();
           } else {
             badge = `<div class="ox-result-badge survive">🎉정답!🎉</div>`;
