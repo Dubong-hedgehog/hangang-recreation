@@ -211,6 +211,13 @@
   </div>
 </div>
 
+<!-- 스피드퀴즈 조 대표 전용 제시어 화면: 운영 화면 다 가리고 이것만 보여줌 -->
+<div id="speed-reveal-overlay" style="display:none; position:fixed; inset:0; background:#0a7a56; color:#fff; z-index:999; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center;">
+  <div id="speed-reveal-team" style="font-size:14px; opacity:0.85; margin-bottom:14px; font-weight:700;"></div>
+  <div id="speed-reveal-words" style="font-size:32px; font-weight:800; line-height:1.6;"></div>
+  <button id="speed-reveal-next-btn" class="btn" style="margin-top:34px; background:#fff; color:#0a7a56; padding:14px 32px; font-size:16px;">다음 단어 →</button>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -582,15 +589,43 @@
   function goSpeedIdle() {
     setScreen('speedquiz', { mode:'idle' });
   }
-  function startSpeedQuiz() {
+  function nextSpeedWord() {
+    db.ref('game/payload/currentIndex').transaction(v => (v || 0) + 1);
+  }
+   function startSpeedQuizAndReveal() {
     const teamId = document.getElementById('speed-team-select').value;
     const words = [1,2,3,4].map(n => document.getElementById('speed-word' + n).value.trim()).filter(Boolean);
     if (!teamId || words.length === 0) return alert('조와 제시어를 입력해주세요.');
     saveSpeedWords();
     setScreen('speedquiz', { teamId, words, currentIndex:0, total: words.length });
+    openSpeedRevealOverlay(teamId, words, 0);
   }
-  function nextSpeedWord() {
-    db.ref('game/payload/currentIndex').transaction(v => (v || 0) + 1);
+  function openSpeedRevealOverlay(teamId, words, idx) {
+    const t = teamsData[teamId];
+    document.getElementById('speed-reveal-team').textContent = (t && t.name || teamId) + '다른 조원은 보면 안 돼요';
+    renderSpeedRevealStep(teamId, words, idx);
+    document.getElementById('speed-reveal-overlay').style.display = 'flex';
+  }
+  function renderSpeedRevealStep(teamId, words, idx) {
+    const done = idx >= words.length;
+    document.getElementById('speed-reveal-words').innerHTML = done
+      ? '🎉 완료!'
+      : `<div style="font-size:14px; opacity:0.75; margin-bottom:10px; font-weight:600;">${idx + 1} / ${words.length}</div>${esc(words[idx])}`;
+    const btn = document.getElementById('speed-reveal-next-btn');
+    if (done) {
+      btn.textContent = '닫기';
+      btn.onclick = hideSpeedWordsToRep;
+    } else {
+      btn.textContent = '다음 단어 →';
+      btn.onclick = function () {
+        const nextIdx = idx + 1;
+        db.ref('game/payload/currentIndex').set(nextIdx);
+        renderSpeedRevealStep(teamId, words, nextIdx);
+      };
+    }
+  }
+  function hideSpeedWordsToRep() {
+    document.getElementById('speed-reveal-overlay').style.display = 'none';
   }
 
   // ---------- 이미지게임 ----------
