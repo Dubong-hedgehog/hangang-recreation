@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>떡잎마을방범대 한강 레크레이션</title>
+<title>🌱떡잎마을🏡방범대🛡️ 한강 레크레이션</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin:0; padding:0; background:#0a7a56; min-height:100vh; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Apple SD Gothic Neo','Malgun Gothic',sans-serif; color:#fff; overflow-x:hidden; }
@@ -31,12 +31,7 @@
   .mini-cell.done { background:#ffd34d; color:#5c4400; }
   .team-score { font-size:11px; color:rgba(255,255,255,0.7); margin-top:6px; }
 
-  .roulette-team { font-size:15px; font-weight:700; color:rgba(255,255,255,0.8); margin-bottom:14px; }
-  .wheel-wrap { position:relative; }
-  .wheel-pointer { position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:30px; color:#ffd34d; z-index:2; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.4)); }
-  #wheel-svg { display:block; margin:0 auto; width:280px; height:280px; border-radius:50%; filter:drop-shadow(0 10px 24px rgba(0,0,0,0.35)); }
-  .roulette-result-name { margin-top:18px; font-size:24px; font-weight:900; color:#ffd34d; min-height:32px; transition:opacity .3s ease; }
-  .roulette-hint { margin-top:10px; font-size:12px; color:rgba(255,255,255,0.6); }
+  .sub-heading { font-size:15px; font-weight:700; color:rgba(255,255,255,0.8); margin-bottom:14px; }
 
   .shuffle-wrap { width:100%; max-width:420px; }
   .shuffle-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-top:16px; }
@@ -98,7 +93,7 @@
     3: { title:'플로깅 코스 시간 내 완주하기', desc:'오후 4시 전까지 이 곳 잔디공원에 도착한 조는 손 들어주세요!!' },
     4: { title:'제일 특이한 쓰레기 / 가장 오래된 쓰레기', desc:'우리가 플로깅하면서 가장 특이한 쓰레기를 주웠다 생각하면 손 들어주세요!!' },
     5: { title:'"떡잎마을방범대" 글자 찾기', desc:'떡·잎·마·을·방·범·대 7글자로 시작하는 단어/간판을 찾아 전부 사진 찍으면 성공' },
-    6: { title:'우리 조원 이름 맞히기', desc:'룰렛으로 뽑힌 조 대표가 조원 이름을 전부 맞히면 성공' },
+    6: { title:'우리 조원 이름 맞히기', desc:'조에서 직접 뽑은 대표가 조원 이름을 전부 맞히면 성공' },
     7: { title:'즉석 OX 퀴즈 서바이벌', desc:'문제를 틀리면 즉시탈락! 마지막까지 살아남은 사람이 속한 조가 승리' },
     8: { title:'절대음감', desc:'조에서 5명씩 선발 / 가장 빠르게 절대음감 성공한 팀이 승리(최대시간 90초)' },
     9: { title:'스피드퀴즈', desc:'조당 제시어 4개를 가장 빠르게 맞춘 조가 승리' },
@@ -115,16 +110,6 @@
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-
-  function polarToCartesian(cx, cy, r, angleDeg) {
-    const rad = (angleDeg - 90) * Math.PI / 180;
-    return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
-  }
-
-  function truncateName(s) {
-    s = String(s || '');
-    return s.length > 5 ? s.slice(0, 5) + '…' : s;
   }
 
   function shuffleArray(arr) {
@@ -273,7 +258,7 @@
     const team = (teams && teams[payload.teamId]) || {};
     const finalLayout = payload.finalLayout || [];
     app.innerHTML = `
-      <div class="roulette-team">${esc(team.name || '')}의 운명의 빙고판 결정 중...</div>
+      <div class="sub-heading">${esc(team.name || '')}의 운명의 빙고판 결정 중...</div>
       <div class="shuffle-wrap">
         <div class="shuffle-grid" id="shuffle-grid"></div>
       </div>`;
@@ -306,85 +291,11 @@
     shuffleTimer = setTimeout(step, 60);
   }
 
-  function renderRoulette(payload, teams) {
-    const team = (teams && teams[payload.teamId]) || {};
-    const pool = (payload.pool && payload.pool.length) ? payload.pool : (team.members || ['...']);
-    const n = pool.length;
-    const segAngle = 360 / n;
-    const colors = ['#ff6b6b','#ffa94d','#ffd43b','#69db7c','#4dabf7','#9775fa','#f783ac','#63e6be'];
-
-    let paths = '';
-    let labels = '';
-    for (let i = 0; i < n; i++) {
-      const startAngle = i * segAngle;
-      const endAngle = (i + 1) * segAngle;
-      const [x1, y1] = polarToCartesian(150, 150, 140, startAngle);
-      const [x2, y2] = polarToCartesian(150, 150, 140, endAngle);
-      const largeArc = segAngle > 180 ? 1 : 0;
-      paths += `<path d="M150,150 L${x1.toFixed(2)},${y1.toFixed(2)} A140,140 0 ${largeArc} 1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${colors[i % colors.length]}" stroke="#fff" stroke-width="2"/>`;
-      const midAngle = startAngle + segAngle / 2;
-      const [tx, ty] = polarToCartesian(150, 150, 95, midAngle);
-      labels += `<text x="${tx.toFixed(2)}" y="${ty.toFixed(2)}" fill="#1a2420" font-size="13" font-weight="700" text-anchor="middle" dominant-baseline="middle" transform="rotate(${midAngle.toFixed(2)},${tx.toFixed(2)},${ty.toFixed(2)})">${esc(truncateName(pool[i]))}</text>`;
-    }
-
-    app.innerHTML = `
-      <div class="roulette-team">${esc(team.name || '')} 대표 뽑기</div>
-      <div class="wheel-wrap">
-        <div class="wheel-pointer">▼</div>
-        <svg id="wheel-svg" viewBox="0 0 300 300" style="transform:rotate(0deg);"><g>${paths}${labels}</g></svg>
-      </div>
-      <div class="roulette-result-name" id="roulette-winner-name" style="opacity:0;"></div>
-      ${payload.phase !== 'spinning' ? '<div class="roulette-hint">곧 추첨을 시작합니다...</div>' : ''}`;
-
-    if (payload.phase !== 'spinning') return; // idle: 정지된 원판만 보여줌
-
-    const svg = document.getElementById('wheel-svg');
-    const winnerIndex = Math.max(0, Math.min(n - 1, payload.winnerIndex || 0));
-    const winnerMidAngle = winnerIndex * segAngle + segAngle / 2;
-    const spins = 6;
-    const targetRotation = spins * 360 + (360 - winnerMidAngle);
-    const duration = 4.2;
-
-    // CSS transition을 0으로 되돌렸다가 다시 트는 방식(rAF 트릭)은 기기/브라우저에 따라
-    // "리플로우"가 한 프레임 안에 묶여버려서 애니메이션 없이 바로 최종 각도로 점프해버리는
-    // 경우가 있음(특히 모바일 브라우저). 그래서 Web Animations API(svg.animate)로 직접
-    // 애니메이션을 만들어서 트는 방식으로 교체 — 이 방식은 리플로우 타이밍에 의존하지 않아
-    // 훨씬 안정적으로 재생됨.
-    svg.style.transform = 'rotate(0deg)';
-    const anim = svg.animate(
-      [
-        { transform: 'rotate(0deg)' },
-        { transform: `rotate(${targetRotation}deg)` }
-      ],
-      { duration: duration * 1000, easing: 'cubic-bezier(0.1,0.7,0.1,1)', fill: 'forwards' }
-    );
-
-    // 틱 소리: 처음엔 빠르게, 점점 느려지게
-    let elapsed = 0;
-    let tickDelay = 70;
-    function scheduleTick() {
-      if (elapsed >= duration * 1000 - 200) return;
-      playTick();
-      elapsed += tickDelay;
-      tickDelay = Math.min(tickDelay * 1.12, 420);
-      setTimeout(scheduleTick, tickDelay);
-    }
-    setTimeout(scheduleTick, 200);
-
-    anim.onfinish = () => {
-      svg.style.transform = `rotate(${targetRotation}deg)`;
-      playDing();
-      const nameEl = document.getElementById('roulette-winner-name');
-      if (nameEl) {
-        nameEl.textContent = '🎉 ' + (payload.resultName || '') + ' 당첨!';
-        nameEl.style.opacity = '1';
-      }
-    };
-  }
-
   // ---------- OX 퀴즈 ----------
   let oxCountdownTimer = null;
   let oxLastSec = null;
+  let oxWasEliminatedAtQuestionStart = null;
+  let oxWasEliminatedQid = null;
 
   function renderOxJoinForm(teams) {
     const teamIds = Object.keys(teams || {}).sort();
@@ -439,13 +350,22 @@
     }
 
     if (payload.mode === 'question') {
-      if (eliminated) {
+      oxWasEliminatedAtQuestionStart = eliminated;
+      oxWasEliminatedQid = payload.qid;
+      const isRevival = !!payload.revival;
+      const canPlay = isRevival ? eliminated : !eliminated;
+      if (!canPlay) {
+        const msg = isRevival
+          ? `<div class="ox-spectator">🏆 생존자는 이번 패자부활전을 구경해요!</div>`
+          : `<div class="ox-spectator">😢 이미 탈락했어요 — 구경 모드</div>`;
         app.innerHTML = `
+          <div class="mission-badge">${isRevival ? '⚡ 패자부활전' : 'OX 퀴즈'}</div>
           <div class="ox-question">${esc(payload.question || '')}</div>
-          <div class="ox-spectator">😢 탈락했어요! 살아남은 조원을 도와주세요! </div>`;
+          ${msg}`;
         return;
       }
       app.innerHTML = `
+        <div class="mission-badge">${isRevival ? '⚡ 패자부활전 — 탈락자만 참여!' : 'OX 퀴즈'}</div>
         <div class="ox-question">${esc(payload.question || '')}</div>
         <div class="ox-countdown" id="ox-countdown">-</div>
         <div class="ox-vote-row">
@@ -483,12 +403,33 @@
     if (payload.mode === 'revealed') {
       db.ref('oxRounds/' + payload.roundId + '/eliminated/' + clientId).once('value').then(snap => {
         const nowOut = snap.exists();
-        const badge = eliminated
-          ? `<div class="ox-result-badge out">땡!! 아쉽지만 살아남은 조원과 함께 끝까지 진행 해봐요!</div>`
-          : (nowOut ? `<div class="ox-result-badge out">😭땡!😭</div>` : `<div class="ox-result-badge survive">🎉정답!🎉</div>`);
-        if (!eliminated && nowOut) playBuzz(); else if (!eliminated) playDing();
+        // 이 문제가 시작될 때(투표 전) 내 상태를 기억해뒀다가 비교해야 "방금 탈락한 건지 / 방금 부활한 건지"를
+        // 정확히 판정할 수 있음. 같은 문제(qid)에 대해 기록이 없으면(예: 결과 화면에 막 들어온 경우) 현재 상태로 대체.
+        const wasOut = (oxWasEliminatedQid === payload.qid) ? oxWasEliminatedAtQuestionStart : nowOut;
+        let badge;
+        if (payload.revival) {
+          if (!wasOut) {
+            badge = `<div class="ox-result-badge" style="background:rgba(255,255,255,0.25); color:#fff;">👀 패자부활전 구경 중</div>`;
+          } else if (!nowOut) {
+            badge = `<div class="ox-result-badge survive">🎉 부활 성공!</div>`;
+            playDing();
+          } else {
+            badge = `<div class="ox-result-badge out">😢 부활 실패 — 계속 구경</div>`;
+            playBuzz();
+          }
+        } else {
+          if (wasOut) {
+            badge = `<div class="ox-result-badge out">계속 구경 모드</div>`;
+          } else if (nowOut) {
+            badge = `<div class="ox-result-badge out">😭 탈락!</div>`;
+            playBuzz();
+          } else {
+            badge = `<div class="ox-result-badge survive">🎉 생존!</div>`;
+            playDing();
+          }
+        }
         app.innerHTML = `
-          <div class="mission-badge">정답 공개</div>
+          <div class="mission-badge">${payload.revival ? '⚡ 패자부활전 결과' : '정답 공개'}</div>
           <div class="ox-answer ${payload.answer === 'O' ? 'o' : 'x'}">${payload.answer === 'O' ? '⭕' : '❌'}</div>
           ${badge}`;
       });
@@ -511,6 +452,13 @@
 
   // ---------- 스피드퀴즈 (제시어는 운영자 화면에만 보임) ----------
   function renderSpeedQuiz(payload, teams) {
+    if (payload.mode === 'idle' || !payload.teamId) {
+      app.innerHTML = `
+        <div class="mission-badge">스피드퀴즈</div>
+        <div class="mission-title">조 대표가 설명하면 조원이 맞혀요!</div>
+        <div class="mission-desc">대표는 제시어를 직접 말할 수 없고, 설명만 할 수 있어요.<br>조당 제시어 4개를 가장 빠르게 맞춘 조가 승리!</div>`;
+      return;
+    }
     const team = (teams && teams[payload.teamId]) || {};
     const total = payload.total || 4;
     const idx = payload.currentIndex || 0;
@@ -553,7 +501,6 @@
     else if (screen === 'missionIntro') renderMissionIntro(payload);
     else if (screen === 'bingoBoard') renderBingoBoard(teams);
     else if (screen === 'bingoShuffle') renderBingoShuffle(payload, teams);
-    else if (screen === 'roulette') renderRoulette(payload, teams);
     else if (screen === 'oxquiz') renderOxQuiz(payload, teams);
     else if (screen === 'speedquiz') renderSpeedQuiz(payload, teams);
     else if (screen === 'imagegame') renderImageGame(payload);
