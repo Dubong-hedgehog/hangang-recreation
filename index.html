@@ -164,10 +164,11 @@
       <div class="hint">제시어는 조를 바꿔도 자동으로 저장/불러와져요. 뷰어 화면에는 제시어가 절대 보이지 않고, 운영자 화면에만 보여요. <span id="speed-save-hint" style="color:#0a7a56; font-weight:700; opacity:0; transition:opacity .3s;">✓ 방금 저장됨</span></div>
       <div class="row" style="margin-top:8px;">
         <button class="btn-outline" onclick="goSpeedIdle()">대기 화면 (설명)</button>
-        <button class="btn" onclick="startSpeedQuiz()">시작 (화면 송출)</button>
+        <button class="btn" onclick="startSpeedQuizAndReveal()">▶️ 시작 &amp; 대표에게 보여주기</button>
       </div>
+      <div class="hint">누르면 공개 화면엔 "n번째 제시어 진행중"만 뜨고, 이 폰엔 대표 전용 화면이 같이 떠요. 폰을 대표한테 건네고, 조원이 맞힐 때마다 그 화면 안의 "다음 단어" 버튼을 직접 누르게 하세요 — 그 버튼 하나로 대표가 보는 단어도 넘어가고 공개 화면 진행 상황도 동시에 넘어가요. 중간에 화면이 꺼졌으면 아래 버튼으로 수동으로도 넘길 수 있어요.</div>
       <div class="row" style="margin-top:8px;">
-        <button class="btn-outline" onclick="nextSpeedWord()">다음 단어 →</button>
+        <button class="btn-outline btn-sm" onclick="nextSpeedWord()">다음 단어 → (수동, 비상용)</button>
       </div>
       <div class="mission-actions">
         <div id="speed-bingo-checks"></div>
