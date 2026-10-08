@@ -15,6 +15,8 @@
   .spinner { margin-top:28px; width:34px; height:34px; border:4px solid rgba(255,255,255,0.25); border-top-color:#fff; border-radius:50%; animation:spin 0.9s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
 
+  .sound-gate-btn { margin-top:24px; background:#ffd34d; color:#5c4400; border:none; border-radius:14px; padding:14px 22px; font-size:15px; font-weight:800; box-shadow:0 8px 18px rgba(0,0,0,0.25); }
+
   .mission-badge { font-size:12px; font-weight:700; background:rgba(255,255,255,0.18); border-radius:20px; padding:5px 14px; margin-bottom:14px; letter-spacing:1px; }
   .mission-title { font-size:26px; font-weight:800; line-height:1.4; margin-bottom:14px; max-width:560px; }
   .mission-desc { font-size:16px; color:rgba(255,255,255,0.85); max-width:520px; line-height:1.6; }
@@ -34,14 +36,36 @@
   .wheel-pointer { position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:30px; color:#ffd34d; z-index:2; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.4)); }
   #wheel-svg { display:block; margin:0 auto; width:280px; height:280px; border-radius:50%; filter:drop-shadow(0 10px 24px rgba(0,0,0,0.35)); }
   .roulette-result-name { margin-top:18px; font-size:24px; font-weight:900; color:#ffd34d; min-height:32px; transition:opacity .3s ease; }
+  .roulette-hint { margin-top:10px; font-size:12px; color:rgba(255,255,255,0.6); }
 
-  .ox-question { font-size:24px; font-weight:800; max-width:560px; line-height:1.5; margin-bottom:20px; }
+  .shuffle-wrap { width:100%; max-width:420px; }
+  .shuffle-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-top:16px; }
+  .shuffle-cell { aspect-ratio:1; background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.22); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:800; }
+  .shuffle-cell.locked { background:#ffd34d; color:#5c4400; animation:pop .3s ease; }
+  @keyframes pop { 0%{ transform:scale(0.7); } 60%{ transform:scale(1.12); } 100%{ transform:scale(1); } }
+
+  .ox-question { font-size:24px; font-weight:800; max-width:560px; line-height:1.5; margin-bottom:16px; }
   .ox-answer { font-size:70px; font-weight:900; }
   .ox-answer.o { color:#7CF29C; }
   .ox-answer.x { color:#ff8a8a; }
+  .ox-countdown { font-size:54px; font-weight:900; color:#ffd34d; margin-bottom:18px; }
+  .ox-vote-row { display:flex; gap:16px; width:100%; max-width:360px; }
+  .ox-vote-btn { flex:1; aspect-ratio:1; border-radius:20px; border:none; font-size:48px; font-weight:900; }
+  .ox-vote-btn.o { background:#2fbf71; color:#fff; }
+  .ox-vote-btn.x { background:#ff5c5c; color:#fff; }
+  .ox-vote-btn.selected { outline:5px solid #ffd34d; }
+  .ox-vote-btn:disabled { opacity:0.35; }
+  .ox-spectator { font-size:16px; color:rgba(255,255,255,0.8); margin-top:10px; background:rgba(0,0,0,0.2); border-radius:12px; padding:10px 18px; }
+  .ox-result-badge { margin-top:18px; font-size:18px; font-weight:800; border-radius:20px; padding:8px 18px; }
+  .ox-result-badge.survive { background:rgba(124,242,156,0.9); color:#0a5c40; }
+  .ox-result-badge.out { background:rgba(255,138,138,0.9); color:#5c0a0a; }
+  .join-form { width:100%; max-width:320px; background:rgba(0,0,0,0.18); border-radius:16px; padding:18px; }
+  .join-form input, .join-form select { width:100%; padding:11px; border-radius:10px; border:none; font-size:15px; margin-top:8px; }
+  .join-form button { width:100%; margin-top:12px; background:#ffd34d; color:#5c4400; border:none; border-radius:10px; padding:11px; font-size:15px; font-weight:800; }
+  .join-form label { font-size:12px; color:rgba(255,255,255,0.7); }
 
   .speed-team { font-size:14px; font-weight:700; color:rgba(255,255,255,0.75); margin-bottom:8px; }
-  .speed-word { font-size:46px; font-weight:900; margin:10px 0; }
+  .speed-big { font-size:40px; font-weight:900; margin:14px 0; }
   .speed-idx { font-size:13px; color:rgba(255,255,255,0.6); }
 
   .image-round { font-size:13px; font-weight:700; color:rgba(255,255,255,0.75); margin-bottom:12px; letter-spacing:1px; }
@@ -57,7 +81,7 @@
 </head>
 <body>
 <div id="app">
-  <div class="logo-wrap" id="screen-waiting">
+  <div class="logo-wrap">
     <div class="logo-title">🏕️ 서대문 떡잎마을 방범대</div>
     <div class="logo-sub">한강 플로깅 &amp; 피크닉 레크레이션</div>
     <div class="spinner"></div>
@@ -103,12 +127,101 @@
     return s.length > 5 ? s.slice(0, 5) + '…' : s;
   }
 
+  function shuffleArray(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // ---------- 소리 (서버/외부 파일 없이 코드로 직접 합성) ----------
+  let audioCtx = null;
+  let soundEnabled = false;
+  try { soundEnabled = localStorage.getItem('sdm_sound_ok') === '1'; } catch (e) {}
+
+  function enableSound() {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      soundEnabled = true;
+      try { localStorage.setItem('sdm_sound_ok', '1'); } catch (e) {}
+    } catch (e) { soundEnabled = false; }
+    render(latestGame, latestTeams);
+  }
+
+  function tone(freq, dur, type, vol) {
+    if (!soundEnabled || !audioCtx) return;
+    try {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = vol == null ? 0.18 : vol;
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      const now = audioCtx.currentTime;
+      gain.gain.setValueAtTime(gain.gain.value, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+      osc.start(now);
+      osc.stop(now + dur);
+    } catch (e) {}
+  }
+
+  function playTick() { tone(620, 0.08, 'square', 0.12); }
+  function playBoing() {
+    // "띠용" 느낌: 짧게 음이 쭉 올라갔다 내려오는 소리
+    if (!soundEnabled || !audioCtx) return;
+    try {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      const now = audioCtx.currentTime;
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.linearRampToValueAtTime(880, now + 0.08);
+      osc.frequency.linearRampToValueAtTime(440, now + 0.16);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 0.22);
+    } catch (e) {}
+  }
+  function playDing() {
+    tone(784, 0.5, 'triangle', 0.2);
+    setTimeout(() => tone(1046, 0.6, 'triangle', 0.18), 90);
+  }
+  function playBuzz() {
+    tone(140, 0.4, 'sawtooth', 0.15);
+  }
+
+  // ---------- 내 참가자 식별 (OX퀴즈용) ----------
+  let clientId = null;
+  try {
+    clientId = localStorage.getItem('sdm_client_id');
+    if (!clientId) {
+      clientId = 'p_' + Math.random().toString(36).slice(2) + Date.now();
+      localStorage.setItem('sdm_client_id', clientId);
+    }
+  } catch (e) {
+    clientId = 'p_' + Math.random().toString(36).slice(2) + Date.now();
+  }
+  function getSavedProfile() {
+    try {
+      return { name: localStorage.getItem('sdm_ox_name') || '', team: localStorage.getItem('sdm_ox_team') || '' };
+    } catch (e) { return { name:'', team:'' }; }
+  }
+  function saveProfile(name, team) {
+    try { localStorage.setItem('sdm_ox_name', name); localStorage.setItem('sdm_ox_team', team); } catch (e) {}
+  }
+
+  // ---------- 화면 렌더링 ----------
   function renderWaiting() {
+    const gateHtml = soundEnabled ? '' : `<button class="sound-gate-btn" onclick="enableSound()">🔊 소리 켜고 시작하기</button>`;
     app.innerHTML = `
       <div class="logo-wrap">
         <div class="logo-title">🏕️ 서대문 떡잎마을 방범대</div>
         <div class="logo-sub">한강 플로깅 &amp; 피크닉 레크레이션</div>
         <div class="spinner"></div>
+        ${gateHtml}
       </div>`;
   }
 
@@ -120,17 +233,26 @@
       <div class="mission-desc">${esc(m.desc)}</div>`;
   }
 
+  function bingoLayoutFor(team) {
+    // team.layout이 있으면 그 순서대로, 없으면 1~16 그대로
+    if (team && Array.isArray(team.layout) && team.layout.length === 16) return team.layout;
+    const def = []; for (let i = 1; i <= 16; i++) def.push(i);
+    return def;
+  }
+
   function renderBingoBoard(teams) {
     const teamIds = Object.keys(teams || {}).sort();
     let cards = teamIds.map(tid => {
       const t = teams[tid];
       const bingo = t.bingo || {};
+      const layout = bingoLayoutFor(t);
       let doneCount = 0;
       let cells = '';
-      for (let i = 1; i <= 16; i++) {
-        const done = !!bingo[i];
+      for (let i = 0; i < 16; i++) {
+        const missionId = layout[i];
+        const done = !!bingo[missionId];
         if (done) doneCount++;
-        cells += `<div class="mini-cell ${done ? 'done' : ''}">${done ? '✓' : i}</div>`;
+        cells += `<div class="mini-cell ${done ? 'done' : ''}">${done ? '✓' : missionId}</div>`;
       }
       return `<div class="team-card">
         <div class="team-card-name">${esc(t.name || tid)}</div>
@@ -143,6 +265,45 @@
         <div class="bingo-title">📋 조별 빙고 현황</div>
         <div class="bingo-grid-of-teams">${cards}</div>
       </div>`;
+  }
+
+  // ---------- 조별 빙고 번호 섞기 연출 (1회성) ----------
+  let shuffleTimer = null;
+  function renderBingoShuffle(payload, teams) {
+    const team = (teams && teams[payload.teamId]) || {};
+    const finalLayout = payload.finalLayout || [];
+    app.innerHTML = `
+      <div class="roulette-team">${esc(team.name || '')}의 운명의 빙고판 결정 중...</div>
+      <div class="shuffle-wrap">
+        <div class="shuffle-grid" id="shuffle-grid"></div>
+      </div>`;
+    const grid = document.getElementById('shuffle-grid');
+    if (shuffleTimer) { clearInterval(shuffleTimer); shuffleTimer = null; }
+
+    const base = []; for (let i = 1; i <= 16; i++) base.push(i);
+    function paint(arr, locked) {
+      grid.innerHTML = arr.map(n => `<div class="shuffle-cell ${locked ? 'locked' : ''}">${n}</div>`).join('');
+    }
+    paint(base, false);
+
+    let tick = 0;
+    const totalTicks = 22;
+    function step() {
+      tick++;
+      if (tick >= totalTicks) {
+        clearInterval(shuffleTimer);
+        shuffleTimer = null;
+        paint(finalLayout.length === 16 ? finalLayout : base, true);
+        playDing();
+        return;
+      }
+      paint(shuffleArray(base), false);
+      playTick();
+      // 점점 느려지게: 간격을 다시 예약
+      const nextDelay = 60 + Math.pow(tick / totalTicks, 2) * 300;
+      shuffleTimer = setTimeout(step, nextDelay);
+    }
+    shuffleTimer = setTimeout(step, 60);
   }
 
   function renderRoulette(payload, teams) {
@@ -166,30 +327,49 @@
       labels += `<text x="${tx.toFixed(2)}" y="${ty.toFixed(2)}" fill="#1a2420" font-size="13" font-weight="700" text-anchor="middle" dominant-baseline="middle" transform="rotate(${midAngle.toFixed(2)},${tx.toFixed(2)},${ty.toFixed(2)})">${esc(truncateName(pool[i]))}</text>`;
     }
 
-    const winnerIndex = Math.max(0, Math.min(n - 1, payload.winnerIndex || 0));
-    const winnerMidAngle = winnerIndex * segAngle + segAngle / 2;
-    const spins = 5;
-    const targetRotation = spins * 360 + (360 - winnerMidAngle);
-
     app.innerHTML = `
-      <div class="roulette-team">${esc(team.name || '')} 대표 뽑는 중</div>
+      <div class="roulette-team">${esc(team.name || '')} 대표 뽑기</div>
       <div class="wheel-wrap">
         <div class="wheel-pointer">▼</div>
-        <svg id="wheel-svg" viewBox="0 0 300 300"><g>${paths}${labels}</g></svg>
+        <svg id="wheel-svg" viewBox="0 0 300 300" style="transform:rotate(0deg);"><g>${paths}${labels}</g></svg>
       </div>
-      <div class="roulette-result-name" id="roulette-winner-name" style="opacity:0;"></div>`;
+      <div class="roulette-result-name" id="roulette-winner-name" style="opacity:0;"></div>
+      ${payload.phase !== 'spinning' ? '<div class="roulette-hint">곧 추첨을 시작합니다...</div>' : ''}`;
+
+    if (payload.phase !== 'spinning') return; // idle: 정지된 원판만 보여줌
 
     const svg = document.getElementById('wheel-svg');
+    const winnerIndex = Math.max(0, Math.min(n - 1, payload.winnerIndex || 0));
+    const winnerMidAngle = winnerIndex * segAngle + segAngle / 2;
+    const spins = 6;
+    const targetRotation = spins * 360 + (360 - winnerMidAngle);
+    const duration = 4.2;
+
+    // 더블 rAF로 애니메이션이 확실히 재생되도록 함
     svg.style.transition = 'none';
     svg.style.transform = 'rotate(0deg)';
-    void svg.offsetWidth; // 강제 리플로우 - 애니메이션 리셋용
-    svg.style.transition = 'transform 3.5s cubic-bezier(0.17,0.67,0.12,0.99)';
     requestAnimationFrame(() => {
-      svg.style.transform = `rotate(${targetRotation}deg)`;
+      requestAnimationFrame(() => {
+        svg.style.transition = `transform ${duration}s cubic-bezier(0.1,0.7,0.1,1)`;
+        svg.style.transform = `rotate(${targetRotation}deg)`;
+      });
     });
+
+    // 틱 소리: 처음엔 빠르게, 점점 느려지게
+    let elapsed = 0;
+    let tickDelay = 70;
+    function scheduleTick() {
+      if (elapsed >= duration * 1000 - 200) return;
+      playTick();
+      elapsed += tickDelay;
+      tickDelay = Math.min(tickDelay * 1.12, 420);
+      setTimeout(scheduleTick, tickDelay);
+    }
+    setTimeout(scheduleTick, 200);
 
     svg.addEventListener('transitionend', function handler() {
       svg.removeEventListener('transitionend', handler);
+      playDing();
       const nameEl = document.getElementById('roulette-winner-name');
       if (nameEl) {
         nameEl.textContent = '🎉 ' + (payload.resultName || '') + ' 당첨!';
@@ -198,25 +378,143 @@
     });
   }
 
-  function renderOxQuiz(payload) {
-    let answerHtml = '';
-    if (payload.revealed) {
-      answerHtml = `<div class="ox-answer ${payload.answer === 'O' ? 'o' : 'x'}">${payload.answer === 'O' ? '⭕' : '❌'}</div>`;
-    }
+  // ---------- OX 퀴즈 ----------
+  let oxCountdownTimer = null;
+  let oxLastSec = null;
+
+  function renderOxJoinForm(teams) {
+    const teamIds = Object.keys(teams || {}).sort();
+    const saved = getSavedProfile();
+    const opts = teamIds.map(id => `<option value="${id}" ${saved.team === id ? 'selected' : ''}>${esc(teams[id].name || id)}</option>`).join('');
     app.innerHTML = `
-      <div class="mission-badge">즉석 OX 퀴즈</div>
-      <div class="ox-question">${esc(payload.question || '')}</div>
-      ${answerHtml}`;
+      <div class="mission-badge">OX 퀴즈 서바이벌 참가</div>
+      <div class="join-form">
+        <label>내 이름 (재밌게 적어도 돼요!)</label>
+        <input type="text" id="ox-join-name" value="${esc(saved.name)}" placeholder="예: 떡잎전사">
+        <label style="display:block; margin-top:10px;">우리 조</label>
+        <select id="ox-join-team">${opts}</select>
+        <button onclick="submitOxJoin()">입장하기</button>
+      </div>`;
   }
 
+  function submitOxJoin() {
+    const name = (document.getElementById('ox-join-name').value || '').trim() || '이름없음';
+    const team = document.getElementById('ox-join-team').value;
+    saveProfile(name, team);
+    const roundId = latestGame && latestGame.payload && latestGame.payload.roundId;
+    if (!roundId) return;
+    db.ref('oxRounds/' + roundId + '/participants/' + clientId).set({ name, team });
+    render(latestGame, latestTeams);
+  }
+
+  function renderOxQuiz(payload, teams) {
+    const roundId = payload.roundId;
+    if (!roundId) {
+      app.innerHTML = `<div class="mission-badge">OX 퀴즈</div><div class="mission-desc">곧 시작합니다...</div>`;
+      return;
+    }
+    db.ref('oxRounds/' + roundId + '/participants/' + clientId).once('value').then(snap => {
+      if (!snap.exists()) { renderOxJoinForm(teams); return; }
+      db.ref('oxRounds/' + roundId + '/eliminated/' + clientId).once('value').then(elimSnap => {
+        const eliminated = elimSnap.exists();
+        renderOxQuizMain(payload, eliminated);
+      });
+    });
+  }
+
+  function renderOxQuizMain(payload, eliminated) {
+    if (oxCountdownTimer) { clearInterval(oxCountdownTimer); oxCountdownTimer = null; }
+    oxLastSec = null;
+
+    if (payload.mode === 'idle' || !payload.mode) {
+      app.innerHTML = `
+        <div class="mission-badge">OX 퀴즈 서바이벌</div>
+        <div class="mission-title">문제를 틀리면 즉시 탈락!</div>
+        <div class="mission-desc">문제가 뜨면 10초 안에 O 또는 X를 선택하세요.<br>10초 안이면 몇 번이든 바꿀 수 있어요.<br>마지막까지 살아남은 사람이 속한 조가 승리해요!</div>`;
+      return;
+    }
+
+    if (payload.mode === 'question') {
+      if (eliminated) {
+        app.innerHTML = `
+          <div class="ox-question">${esc(payload.question || '')}</div>
+          <div class="ox-spectator">😢 이미 탈락했어요 — 구경 모드</div>`;
+        return;
+      }
+      app.innerHTML = `
+        <div class="ox-question">${esc(payload.question || '')}</div>
+        <div class="ox-countdown" id="ox-countdown">-</div>
+        <div class="ox-vote-row">
+          <button class="ox-vote-btn o" id="ox-btn-o" onclick="submitOxVote('O')">O</button>
+          <button class="ox-vote-btn x" id="ox-btn-x" onclick="submitOxVote('X')">X</button>
+        </div>`;
+      // 내 현재 선택 표시
+      db.ref('oxRounds/' + payload.roundId + '/q/' + payload.qid + '/votes/' + clientId).once('value').then(snap => {
+        const v = snap.val();
+        if (v && v.choice) {
+          const btn = document.getElementById(v.choice === 'O' ? 'ox-btn-o' : 'ox-btn-x');
+          if (btn) btn.classList.add('selected');
+        }
+      });
+      const tickLoop = () => {
+        const remain = Math.max(0, payload.deadline - Date.now());
+        const sec = Math.ceil(remain / 1000);
+        const el = document.getElementById('ox-countdown');
+        if (el) el.textContent = sec > 0 ? sec : '마감!';
+        if (sec !== oxLastSec) {
+          oxLastSec = sec;
+          if (sec > 0) playTick();
+        }
+        if (remain <= 0) {
+          clearInterval(oxCountdownTimer); oxCountdownTimer = null;
+          const bo = document.getElementById('ox-btn-o'); const bx = document.getElementById('ox-btn-x');
+          if (bo) bo.disabled = true; if (bx) bx.disabled = true;
+        }
+      };
+      tickLoop();
+      oxCountdownTimer = setInterval(tickLoop, 150);
+      return;
+    }
+
+    if (payload.mode === 'revealed') {
+      db.ref('oxRounds/' + payload.roundId + '/eliminated/' + clientId).once('value').then(snap => {
+        const nowOut = snap.exists();
+        const badge = eliminated
+          ? `<div class="ox-result-badge out">계속 구경 모드</div>`
+          : (nowOut ? `<div class="ox-result-badge out">😭 탈락!</div>` : `<div class="ox-result-badge survive">🎉 생존!</div>`);
+        if (!eliminated && nowOut) playBuzz(); else if (!eliminated) playDing();
+        app.innerHTML = `
+          <div class="mission-badge">정답 공개</div>
+          <div class="ox-answer ${payload.answer === 'O' ? 'o' : 'x'}">${payload.answer === 'O' ? '⭕' : '❌'}</div>
+          ${badge}`;
+      });
+      return;
+    }
+
+    app.innerHTML = `<div class="mission-badge">OX 퀴즈</div>`;
+  }
+
+  function submitOxVote(choice) {
+    const payload = latestGame && latestGame.payload;
+    if (!payload || payload.mode !== 'question') return;
+    if (Date.now() > payload.deadline) return;
+    const saved = getSavedProfile();
+    db.ref('oxRounds/' + payload.roundId + '/q/' + payload.qid + '/votes/' + clientId).set({ name: saved.name, team: saved.team, choice });
+    document.querySelectorAll('.ox-vote-btn').forEach(b => b.classList.remove('selected'));
+    const btn = document.getElementById(choice === 'O' ? 'ox-btn-o' : 'ox-btn-x');
+    if (btn) btn.classList.add('selected');
+  }
+
+  // ---------- 스피드퀴즈 (제시어는 운영자 화면에만 보임) ----------
   function renderSpeedQuiz(payload, teams) {
     const team = (teams && teams[payload.teamId]) || {};
-    const words = payload.words || [];
+    const total = payload.total || 4;
     const idx = payload.currentIndex || 0;
+    const done = idx >= total;
     app.innerHTML = `
-      <div class="speed-team">${esc(team.name || '')} 스피드퀴즈</div>
-      <div class="speed-word">${esc(words[idx] || '완료!')}</div>
-      <div class="speed-idx">${Math.min(idx + 1, words.length)} / ${words.length}</div>`;
+      <div class="speed-team">${esc(team.name || '')} 스피드퀴즈 진행중</div>
+      <div class="speed-big">${done ? '🎉 완료!' : (idx + 1) + '번째 제시어 진행중'}</div>
+      <div class="speed-idx">${Math.min(idx + (done ? 0 : 1), total)} / ${total}</div>`;
   }
 
   function renderImageGame(payload) {
@@ -245,11 +543,14 @@
   function render(game, teams) {
     const screen = (game && game.screen) || 'waiting';
     const payload = (game && game.payload) || {};
+    if (screen !== 'bingoShuffle' && shuffleTimer) { clearTimeout(shuffleTimer); clearInterval(shuffleTimer); shuffleTimer = null; }
+    if (screen !== 'oxquiz' && oxCountdownTimer) { clearInterval(oxCountdownTimer); oxCountdownTimer = null; }
     if (screen === 'waiting') renderWaiting();
     else if (screen === 'missionIntro') renderMissionIntro(payload);
     else if (screen === 'bingoBoard') renderBingoBoard(teams);
+    else if (screen === 'bingoShuffle') renderBingoShuffle(payload, teams);
     else if (screen === 'roulette') renderRoulette(payload, teams);
-    else if (screen === 'oxquiz') renderOxQuiz(payload);
+    else if (screen === 'oxquiz') renderOxQuiz(payload, teams);
     else if (screen === 'speedquiz') renderSpeedQuiz(payload, teams);
     else if (screen === 'imagegame') renderImageGame(payload);
     else if (screen === 'final') renderFinal(payload);
