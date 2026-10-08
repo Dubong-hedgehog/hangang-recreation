@@ -587,45 +587,37 @@
     });
   }
   function goSpeedIdle() {
+    currentSpeedTeamId = null;
+    currentSpeedWords = [];
+    currentSpeedDeadline = null;
     setScreen('speedquiz', { mode:'idle' });
   }
-  function nextSpeedWord() {
-    db.ref('game/payload/currentIndex').transaction(v => (v || 0) + 1);
-  }
-   function startSpeedQuizAndReveal() {
+  let currentSpeedTeamId = null;
+  let currentSpeedWords = [];
+  let currentSpeedDeadline = null;
+
+  function startSpeedQuiz() {
     const teamId = document.getElementById('speed-team-select').value;
     const words = [1,2,3,4].map(n => document.getElementById('speed-word' + n).value.trim()).filter(Boolean);
     if (!teamId || words.length === 0) return alert('조와 제시어를 입력해주세요.');
     saveSpeedWords();
-    setScreen('speedquiz', { teamId, words, currentIndex:0, total: words.length });
-    openSpeedRevealOverlay(teamId, words, 0);
+    currentSpeedTeamId = teamId;
+    currentSpeedWords = words;
+    currentSpeedDeadline = Date.now() + 60000;
+    setScreen('speedquiz', { teamId, words, currentIndex:0, total: words.length, deadline: currentSpeedDeadline, result:null });
   }
-  function openSpeedRevealOverlay(teamId, words, idx) {
-    const t = teamsData[teamId];
-    document.getElementById('speed-reveal-team').textContent = (t && t.name || teamId) + '다른 조원은 보면 안 돼요';
-    renderSpeedRevealStep(teamId, words, idx);
-    document.getElementById('speed-reveal-overlay').style.display = 'flex';
-  }
-  function renderSpeedRevealStep(teamId, words, idx) {
-    const done = idx >= words.length;
-    document.getElementById('speed-reveal-words').innerHTML = done
-      ? '🎉 완료!'
-      : `<div style="font-size:14px; opacity:0.75; margin-bottom:10px; font-weight:600;">${idx + 1} / ${words.length}</div>${esc(words[idx])}`;
-    const btn = document.getElementById('speed-reveal-next-btn');
-    if (done) {
-      btn.textContent = '닫기';
-      btn.onclick = hideSpeedWordsToRep;
-    } else {
-      btn.textContent = '다음 단어 →';
-      btn.onclick = function () {
-        const nextIdx = idx + 1;
-        db.ref('game/payload/currentIndex').set(nextIdx);
-        renderSpeedRevealStep(teamId, words, nextIdx);
-      };
-    }
-  }
-  function hideSpeedWordsToRep() {
-    document.getElementById('speed-reveal-overlay').style.display = 'none';
+  function nextSpeedWord() {
+    if (!currentSpeedTeamId) return alert('먼저 "시작"을 눌러서 조를 진행시켜주세요.');
+    db.ref('game/payload/currentIndex').transaction(v => (v || 0) + 1).then(res => {
+      const newIndex = res.snapshot.val();
+      if (newIndex >= currentSpeedWords.length) {
+        const success = Date.now() <= currentSpeedDeadline;
+        db.ref('game/payload/result').set(success ? 'success' : 'fail');
+        if (success) {
+          setBingo(currentSpeedTeamId, 9, true);
+        }
+      }
+    });
   }
 
   // ---------- 이미지게임 ----------
