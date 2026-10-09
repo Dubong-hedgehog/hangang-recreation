@@ -593,6 +593,18 @@
     chosungStopwatchTimer = setInterval(tick, 100);
   }
 
+  function renderChosungResults(payload) {
+    const medal = (i) => i === 0 ? '🥇' : i === 1 ? '🥈' : (i + 1) + '위';
+    const rows = (payload.ranking || []).map((r, i) => `
+      <div class="final-row ${i < 2 ? 'rank1' : ''}">
+        <span><span class="final-rank">${medal(i)}</span>${esc(r.name)}</span>
+        <span>${(r.elapsed / 1000).toFixed(1)}초</span>
+      </div>`).join('');
+    app.innerHTML = `
+      <div class="final-title">🏆 초성퀴즈 결과</div>
+      <div class="final-list">${rows || '<span style="opacity:0.7;">기록 없음</span>'}</div>`;
+  }
+
   // ---------- 이미지게임 (미션 9) ----------
   function renderImageRound2(payload, teams) {
     if (payload.mode === 'idle' || !payload.teamId) {
@@ -654,6 +666,7 @@
     else if (screen === 'oxquiz') renderOxQuiz(payload, teams);
     else if (screen === 'speedquiz') renderSpeedQuiz(payload, teams);
     else if (screen === 'chosung') renderChosung(payload, teams);
+    else if (screen === 'chosungResults') renderChosungResults(payload);
     else if (screen === 'imageround2') renderImageRound2(payload, teams);
     else if (screen === 'final') renderFinal(payload);
     else renderWaiting();
