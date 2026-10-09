@@ -592,7 +592,7 @@
       <div class="speed-team">${esc(team.name || '')}</div>
       <div class="chosung-prompt">${esc(payload.prompt || '')}</div>
       <div class="chosung-stopwatch" id="chosung-stopwatch">0.0</div>`;
-    const startTime = payload.startTime || Date.now();
+    const startTime = Date.now();
     const tick = () => {
       const el = document.getElementById('chosung-stopwatch');
       if (el) el.textContent = ((Date.now() - startTime) / 1000).toFixed(1);
