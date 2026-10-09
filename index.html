@@ -191,11 +191,19 @@
         <button class="btn" onclick="startChosung()">▶️ 시작</button>
         <button class="btn-outline" onclick="finishChosung()">⏹ 완료 (기록 저장)</button>
       </div>
-      <div class="hint" id="chosung-status-hint">마지막 조원까지 전부 다른 단어를 말하면 "완료"를 눌러서 기록을 저장하세요.</div>
+      <div class="hint" id="chosung-status-hint">마지막 조원까지 통과하면 "완료"를 눌러서 기록을 저장하세요.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">결과발표(가장 빠른 2개 조 자동 빙고처리)</div>
+      <div class="hint" id="chosung-ready-hint">아직 모든 조의 기록이 다 모이지 않았어요.</div>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn" id="chosung-results-btn" onclick="publishChosungResults()" disabled>🏆 결과발표 🏆</button>
+      </div>
+      <div class="hint">누르면 기록이 빠른 2개 조에 자동으로 빙고체크</div>
       <div class="mission-actions">
         <div id="chosung-bingo-checks"></div>
       </div>
-      <div class="hint">조가 성공하면 위에서 빙고를 체크해주세요.</div>
+      <div class="hint">(필요시 직접 수정가능)</div>
     </div>
   </div>
 
@@ -695,6 +703,7 @@
 
   // ---------- 초성퀴즈 (미션 8) ----------
   let chosungBankData = {};
+  let chosungResultsData = {};
   let currentChosungTeamId = null;
   let currentChosungStartTime = null;
 
@@ -748,11 +757,35 @@
   }
   function finishChosung() {
     if (!currentChosungTeamId) return alert('먼저 "시작"을 눌러주세요.');
+    const teamId = currentChosungTeamId;
     const elapsed = Date.now() - currentChosungStartTime;
-    setScreen('chosung', { teamId: currentChosungTeamId, mode:'stopped', elapsed });
-    document.getElementById('chosung-status-hint').textContent = '기록 완료! (' + (elapsed / 1000).toFixed(1) + '초) 성공했으면 위에서 빙고를 체크해주세요.';
+    db.ref('chosungResults/' + teamId).set(elapsed);
+    setScreen('chosung', { teamId, mode:'stopped', elapsed });
+    document.getElementById('chosung-status-hint').textContent = '기록 저장 완료! (' + (elapsed / 1000).toFixed(1) + '초) 모든 조가 끝나면 아래 "결과발표"를 눌러주세요.';
     currentChosungTeamId = null;
     currentChosungStartTime = null;
+  }
+  function checkChosungResultsReady() {
+    const btn = document.getElementById('chosung-results-btn');
+    const hint = document.getElementById('chosung-ready-hint');
+    if (!btn || !hint) return;
+    const teamIds = Object.keys(teamsData);
+    const missing = teamIds.filter(id => !(id in chosungResultsData));
+    if (teamIds.length > 0 && missing.length === 0) {
+      btn.disabled = false;
+      hint.textContent = '모든 조의 기록이 모였어요! 결과발표를 눌러주세요.';
+    } else {
+      btn.disabled = true;
+      const names = missing.map(id => (teamsData[id] && teamsData[id].name) || id).join(', ');
+      hint.textContent = teamIds.length === 0 ? '아직 조가 없어요.' : ('아직 기록이 없는 조: ' + names);
+    }
+  }
+  function publishChosungResults() {
+    const ranked = Object.keys(chosungResultsData).map(id => ({
+      id, name: (teamsData[id] && teamsData[id].name) || id, elapsed: chosungResultsData[id]
+    })).sort((a, b) => a.elapsed - b.elapsed);
+    ranked.slice(0, 2).forEach(r => setBingo(r.id, 8, true));
+    setScreen('chosungResults', { ranking: ranked.map(r => ({ name:r.name, elapsed:r.elapsed })) });
   }
 
   // ---------- 이미지게임 (미션 9) ----------
@@ -909,6 +942,7 @@
     renderImageTeamSelect();
     renderFinalRanking();
     renderOxRosterLive(currentOxRoundId);
+    checkChosungResultsReady();
   });
   db.ref('oxBank').on('value', snap => {
     oxBankData = snap.val() || {};
@@ -921,6 +955,10 @@
   db.ref('chosungBank').on('value', snap => {
     chosungBankData = snap.val() || {};
     loadChosungForTeam();
+  });
+  db.ref('chosungResults').on('value', snap => {
+    chosungResultsData = snap.val() || {};
+    checkChosungResultsReady();
   });
   db.ref('imageBank').on('value', snap => {
     imageBankData = snap.val() || {};
