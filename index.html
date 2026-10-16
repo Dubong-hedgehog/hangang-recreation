@@ -82,6 +82,11 @@
   <div class="card">
     <button class="btn" onclick="addTeam()">+ 조 추가</button>
   </div>
+  <div class="card">
+    <div class="card-title">테스트 기록 초기화</div>
+    <button class="btn-danger" onclick="resetTestData()">⚠️ 게임 기록 전부 초기화</button>
+    <div class="hint">빙고 체크, 빙고판 섞기, 초성퀴즈 기록, OX 참가·탈락 기록을 지워요. 조·조원, 스피드 제시어, 초성, 사진, OX 문제는 그대로 남아요.</div>
+  </div>
   <div id="teams-list"></div>
 </div>
 
@@ -928,6 +933,28 @@
   function publishFinal() {
     const ranked = renderFinalRanking();
     setScreen('final', { ranking: ranked.map(r => ({ name:r.name, lineCount:r.lineCount, cellCount:r.cellCount })) });
+  }
+
+  // ---------- 테스트 기록 초기화 ----------
+  function resetTestData() {
+    const ok = prompt('행사 전 테스트 기록을 전부 지웁니다.\n계속하려면 "초기화"라고 입력하세요.');
+    if (ok !== '초기화') return;
+    const updates = {};
+    Object.keys(teamsData).forEach(id => {
+      updates['teams/' + id + '/bingo'] = null;
+      updates['teams/' + id + '/layout'] = null;
+      updates['teams/' + id + '/layoutLocked'] = null;
+    });
+    updates['chosungResults'] = null;
+    updates['oxRounds'] = null;
+    updates['game'] = { screen:'waiting', payload:{} };
+    db.ref().update(updates).then(() => {
+      currentOxRoundId = null;
+      currentOxQid = null;
+      currentOxQuestionNumber = 0;
+      detachOxRosterListeners();
+      alert('초기화 완료! 조·조원, 제시어, 초성, 사진, OX 문제는 그대로 있어요.');
+    });
   }
 
   // ---------- 실시간 구독 ----------
