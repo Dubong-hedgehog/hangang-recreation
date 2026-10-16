@@ -30,6 +30,19 @@
   .mini-cell { aspect-ratio:1; border-radius:4px; background:rgba(255,255,255,0.12); font-size:9px; display:flex; align-items:center; justify-content:center; font-weight:700; color:rgba(255,255,255,0.5); }
   .mini-cell.done { background:#ffd34d; color:#5c4400; }
   .team-score { font-size:11px; color:rgba(255,255,255,0.7); margin-top:6px; }
+  .team-card { position:relative; }
+  .team-card.has-bingo { border:2px solid #ffd34d; box-shadow:0 0 18px rgba(255,211,77,0.45); }
+  .team-card.just-bingo { animation:bingoPulse 0.9s ease-out 2; }
+  @keyframes bingoPulse { 0%{transform:scale(1);} 35%{transform:scale(1.07);} 100%{transform:scale(1);} }
+  .bingo-badge { position:absolute; top:-10px; right:-6px; background:#e63946; color:#fff; font-size:11px; font-weight:900; border-radius:12px; padding:3px 9px; box-shadow:0 3px 8px rgba(0,0,0,0.3); }
+  .mini-grid-wrap { position:relative; }
+  .mini-cell.line { background:#ffb703; color:#5c2e00; }
+  .bingo-svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
+  .bingo-line { fill:none; stroke-linecap:round; stroke-dasharray:1; stroke-dashoffset:0; }
+  .bingo-line.new { animation:drawLine 0.7s ease-out both; }
+  @keyframes drawLine { from{stroke-dashoffset:1;} to{stroke-dashoffset:0;} }
+  .bingo-toast { position:fixed; left:50%; top:42%; transform:translate(-50%,-50%); background:#e63946; color:#fff; font-size:32px; font-weight:900; padding:18px 28px; border-radius:20px; box-shadow:0 12px 30px rgba(0,0,0,0.35); z-index:50; animation:toastIn 2.6s ease forwards; white-space:nowrap; }
+  @keyframes toastIn { 0%{opacity:0; transform:translate(-50%,-50%) scale(0.6);} 15%{opacity:1; transform:translate(-50%,-50%) scale(1.08);} 25%{transform:translate(-50%,-50%) scale(1);} 85%{opacity:1;} 100%{opacity:0;} }
 
   .sub-heading { font-size:15px; font-weight:700; color:rgba(255,255,255,0.8); margin-bottom:14px; }
 
@@ -229,24 +242,67 @@
     return def;
   }
 
+  const BINGO_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  function lineCoords(k) {
+    if (k < 3) { const y = 5 + 10 * k; return [2, y, 28, y]; }
+    if (k < 6) { const x = 5 + 10 * (k - 3); return [x, 2, x, 28]; }
+    return k === 6 ? [3, 3, 27, 27] : [27, 3, 3, 27];
+  }
+  function teamBingoLines(t) {
+    const layout = bingoLayoutFor(t);
+    const bingo = (t && t.bingo) || {};
+    const marked = layout.map(m => !!bingo[m]);
+    const lines = [];
+    BINGO_LINES.forEach((ln, k) => { if (ln.every(i => marked[i])) lines.push(k); });
+    return { marked, lines, layout };
+  }
+  let seenBingoLines = null;
+  function snapshotSeen(teams) {
+    const m = {};
+    Object.keys(teams || {}).forEach(id => { m[id] = teamBingoLines(teams[id]).lines; });
+    return m;
+  }
+  function playBingoFanfare() {
+    [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.35, 'triangle', 0.2), i * 110));
+  }
+  function showBingoToast(text) {
+    const el = document.createElement('div');
+    el.className = 'bingo-toast';
+    el.textContent = text;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2700);
+  }
+
   function renderBingoBoard(teams) {
     const teamIds = Object.keys(teams || {}).sort();
+    if (seenBingoLines === null && teams) seenBingoLines = snapshotSeen(teams);
+    const seen = seenBingoLines || {};
+    const newTeams = [];
     let cards = teamIds.map(tid => {
       const t = teams[tid];
-      const bingo = t.bingo || {};
-      const layout = bingoLayoutFor(t);
-      let doneCount = 0;
+      const { marked, lines, layout } = teamBingoLines(t);
+      const prev = seen[tid] || [];
+      const fresh = seenBingoLines ? lines.filter(k => !prev.includes(k)) : [];
+      if (fresh.length) newTeams.push(t.name || tid);
+      const lineCells = new Set();
+      lines.forEach(k => BINGO_LINES[k].forEach(i => lineCells.add(i)));
       let cells = '';
       for (let i = 0; i < 9; i++) {
-        const missionId = layout[i];
-        const done = !!bingo[missionId];
-        if (done) doneCount++;
-        cells += `<div class="mini-cell ${done ? 'done' : ''}">${done ? '✓' : missionId}</div>`;
+        const cls = marked[i] ? (lineCells.has(i) ? 'done line' : 'done') : '';
+        cells += `<div class="mini-cell ${cls}">${marked[i] ? '✓' : layout[i]}</div>`;
       }
-      return `<div class="team-card">
+      const svg = lines.length ? `<svg class="bingo-svg" viewBox="0 0 30 30">${lines.map(k => {
+        const [x1, y1, x2, y2] = lineCoords(k);
+        const nw = fresh.includes(k) ? ' new' : '';
+        return `<line class="bingo-line${nw}" pathLength="1" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(255,255,255,0.9)" stroke-width="3.6"/>` +
+               `<line class="bingo-line${nw}" pathLength="1" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#e63946" stroke-width="2.2"/>`;
+      }).join('')}</svg>` : '';
+      const doneCount = marked.filter(Boolean).length;
+      return `<div class="team-card ${lines.length ? 'has-bingo' : ''} ${fresh.length ? 'just-bingo' : ''}">
+        ${lines.length ? `<div class="bingo-badge">${lines.length} BINGO</div>` : ''}
         <div class="team-card-name">${esc(t.name || tid)}</div>
-        <div class="team-mini-grid">${cells}</div>
-        <div class="team-score">${doneCount} / 9</div>
+        <div class="mini-grid-wrap"><div class="team-mini-grid">${cells}</div>${svg}</div>
+        <div class="team-score">${lines.length}빙고 · ${doneCount}/9칸</div>
       </div>`;
     }).join('');
     app.innerHTML = `
@@ -254,6 +310,11 @@
         <div class="bingo-title">📋 조별 빙고 현황</div>
         <div class="bingo-grid-of-teams">${cards}</div>
       </div>`;
+    if (teams) seenBingoLines = snapshotSeen(teams);
+    if (newTeams.length) {
+      playBingoFanfare();
+      showBingoToast('🎉 ' + newTeams.join(', ') + ' BINGO!');
+    }
   }
 
   // ---------- 조별 빙고 번호 섞기 연출 (1회성) ----------
@@ -680,6 +741,7 @@
   });
   db.ref('teams').on('value', snap => {
     latestTeams = snap.val();
+    if (seenBingoLines === null && latestTeams) seenBingoLines = snapshotSeen(latestTeams);
     render(latestGame, latestTeams);
   });
 </script>
