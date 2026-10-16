@@ -358,6 +358,8 @@
   // ---------- OX 퀴즈 ----------
   let oxCountdownTimer = null;
   let speedCountdownTimer = null;
+  let speedRoundKey = null;
+  let speedLocalDeadline = 0;
   let oxLastSec = null;
   let oxWasEliminatedAtQuestionStart = null;
   let oxWasEliminatedQid = null;
@@ -603,8 +605,12 @@
       <div class="speed-idx">${Math.min(idx + 1, total)} / ${total}</div>
       <div class="speed-countdown" id="speed-countdown">60</div>`;
 
+    if (speedRoundKey !== payload.deadline) {
+      speedRoundKey = payload.deadline;
+      speedLocalDeadline = Date.now() + 60000;
+    }
     const tickLoop = () => {
-      const remain = Math.max(0, (payload.deadline || 0) - Date.now());
+      const remain = Math.max(0, speedLocalDeadline - Date.now());
       const sec = Math.ceil(remain / 1000);
       const el = document.getElementById('speed-countdown');
       if (el) {
